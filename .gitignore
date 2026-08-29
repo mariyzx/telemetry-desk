@@ -1,0 +1,17 @@
+node_modules/
+dist/
+coverage/
+release/
+out/
+*.log
+.env
+.env.*
+!.env.example
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.tsbuildinfo
+.agents/
+skills-lock.json
