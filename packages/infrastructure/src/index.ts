@@ -1,2 +1,1 @@
-// Adapters de infraestrutura serão exportados daqui.
-export {};
+export { SystemClock } from './clock/system-clock.js';

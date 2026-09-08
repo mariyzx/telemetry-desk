@@ -10,6 +10,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@telemetry-desk/application": "^0.1.0",
+    "@telemetry-desk/infrastructure": "^0.1.0",
+    "@telemetry-desk/platform": "^0.1.0",
+    "@telemetry-desk/shared": "^0.1.0",
     "electron": "^44.0.0"
   }
 }

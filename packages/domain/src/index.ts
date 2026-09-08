@@ -1,2 +1,1 @@
-// Regras puras de domínio serão exportadas daqui.
-export {};
+export type { PlatformCapabilities } from './capabilities/platform-capabilities.js';

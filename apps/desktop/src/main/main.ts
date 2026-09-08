@@ -1,25 +1,38 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { GetRuntimeStatusService } from '@telemetry-desk/application';
+import { SystemClock } from '@telemetry-desk/infrastructure';
+import { getPlatformCapabilities } from '@telemetry-desk/platform';
+import { registerRuntimeIpc } from './ipc.js';
+import { createMainWindow } from './window.js';
 
 const directory = fileURLToPath(new URL('.', import.meta.url));
+let isQuitting = false;
 
-function createWindow(): void {
-  const window = new BrowserWindow({
-    width: 1100,
-    height: 720,
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-      preload: join(directory, '../preload/preload.js'),
-    },
+const clock = new SystemClock();
+const runtimeStatusService = new GetRuntimeStatusService(clock, async () =>
+  getPlatformCapabilities(process.platform),
+);
+
+registerRuntimeIpc(ipcMain, runtimeStatusService);
+
+void app.whenReady().then(() => {
+  createMainWindow({
+    BrowserWindow,
+    preloadPath: join(directory, '../preload/preload.js'),
+    dashboardPath: join(directory, '../../../dashboard/dist/index.html'),
+    devServerUrl: process.env['VITE_DEV_SERVER_URL'],
+    isQuitting: () => isQuitting,
   });
+});
 
-  window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-  window.webContents.on('will-navigate', (event) => event.preventDefault());
-  void window.loadFile(join(directory, '../../../dashboard/dist/index.html'));
-}
+app.on('before-quit', () => {
+  isQuitting = true;
+});
 
-void app.whenReady().then(createWindow);
-app.on('window-all-closed', () => app.quit());
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
