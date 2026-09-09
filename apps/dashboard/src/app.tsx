@@ -1,13 +1,10 @@
 import { useEffect, useState } from 'react';
-import type { GatewayStatusResponse, RuntimeStatusResponse } from '@telemetry-desk/shared';
+import type { RuntimeStatusResponse } from '@telemetry-desk/shared';
+import { useGatewayStatus } from './hooks/use-gateway-status.js';
 
-type AppState =
+type RuntimeState =
   | { kind: 'loading' }
-  | {
-      kind: 'success';
-      runtime: RuntimeStatusResponse['data'];
-      gateway: GatewayStatusResponse['data'];
-    }
+  | { kind: 'success'; data: RuntimeStatusResponse['data'] }
   | { kind: 'error' };
 
 function countEnabledCapabilities(
@@ -16,7 +13,9 @@ function countEnabledCapabilities(
   return Object.values(capabilities).filter(Boolean).length;
 }
 
-function formatGatewayQuality(quality: GatewayStatusResponse['data']['quality']): string {
+function formatGatewayQuality(
+  quality: 'ok' | 'timeout' | 'permission_denied' | 'unsupported' | 'unavailable',
+): string {
   switch (quality) {
     case 'ok':
       return 'ok';
@@ -32,33 +31,28 @@ function formatGatewayQuality(quality: GatewayStatusResponse['data']['quality'])
 }
 
 export function App() {
-  const [state, setState] = useState<AppState>({ kind: 'loading' });
+  const [runtime, setRuntime] = useState<RuntimeState>({ kind: 'loading' });
+  const gateway = useGatewayStatus();
 
   useEffect(() => {
     let cancelled = false;
     const api = window.telemetryDesk;
 
     if (!api) {
-      setState({ kind: 'error' });
+      setRuntime({ kind: 'error' });
       return;
     }
 
-    void Promise.all([
-      api.getRuntimeStatus(crypto.randomUUID()),
-      api.getGatewayStatus(crypto.randomUUID()),
-    ])
-      .then(([runtime, gateway]) => {
+    void api
+      .getRuntimeStatus(crypto.randomUUID())
+      .then((response) => {
         if (!cancelled) {
-          setState({
-            kind: 'success',
-            runtime: runtime.data,
-            gateway: gateway.data,
-          });
+          setRuntime({ kind: 'success', data: response.data });
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setState({ kind: 'error' });
+          setRuntime({ kind: 'error' });
         }
       });
 
@@ -67,7 +61,7 @@ export function App() {
     };
   }, []);
 
-  if (state.kind === 'loading') {
+  if (runtime.kind === 'loading' || gateway.kind === 'loading') {
     return (
       <main>
         <p>Carregando status…</p>
@@ -75,7 +69,7 @@ export function App() {
     );
   }
 
-  if (state.kind === 'error') {
+  if (runtime.kind === 'error' || gateway.kind === 'error') {
     return (
       <main>
         <p role="alert">Não foi possível obter o status local.</p>
@@ -83,8 +77,8 @@ export function App() {
     );
   }
 
-  const enabled = countEnabledCapabilities(state.runtime.capabilities);
-  const latencyLabel = state.gateway.latencyMs === null ? '—' : `${state.gateway.latencyMs} ms`;
+  const enabled = countEnabledCapabilities(runtime.data.capabilities);
+  const latencyLabel = gateway.data.latencyMs === null ? '—' : `${gateway.data.latencyMs} ms`;
 
   return (
     <main>
@@ -92,9 +86,9 @@ export function App() {
       <p>{enabled} de 6 capacidades disponíveis</p>
       <section aria-labelledby="gateway-heading">
         <h2 id="gateway-heading">Gateway</h2>
-        <p>Host: {state.gateway.gatewayHost ?? 'indisponível'}</p>
+        <p>Host: {gateway.data.gatewayHost ?? 'indisponível'}</p>
         <p>Latência: {latencyLabel}</p>
-        <p>Qualidade: {formatGatewayQuality(state.gateway.quality)}</p>
+        <p>Qualidade: {formatGatewayQuality(gateway.data.quality)}</p>
       </section>
     </main>
   );

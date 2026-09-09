@@ -1,29 +1,47 @@
-import { render, screen } from '@testing-library/react';
-import { afterEach, expect, it, vi } from 'vitest';
+import { act, cleanup, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { App } from './app.js';
 
-afterEach(() => {
-  vi.restoreAllMocks();
+function runtimeReady() {
+  return {
+    correlationId: crypto.randomUUID(),
+    data: {
+      status: 'ready' as const,
+      observedAtEpochMs: 1700000000000,
+      monotonicMs: 42,
+      capabilities: {
+        icmp: true,
+        wifiSignal: false,
+        wifiChannel: false,
+        wifiRoaming: false,
+        gpuMetrics: false,
+        networkInterfaceStats: false,
+      },
+    },
+  };
+}
+
+beforeEach(() => {
+  vi.useFakeTimers();
 });
+
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+  delete window.telemetryDesk;
+});
+
+async function flushEffects(): Promise<void> {
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+}
 
 it('shows ready status, capability count and gateway probe', async () => {
   window.telemetryDesk = {
-    getRuntimeStatus: vi.fn().mockResolvedValue({
-      correlationId: crypto.randomUUID(),
-      data: {
-        status: 'ready',
-        observedAtEpochMs: 1700000000000,
-        monotonicMs: 42,
-        capabilities: {
-          icmp: true,
-          wifiSignal: false,
-          wifiChannel: false,
-          wifiRoaming: false,
-          gpuMetrics: false,
-          networkInterfaceStats: false,
-        },
-      },
-    }),
+    getRuntimeStatus: vi.fn().mockResolvedValue(runtimeReady()),
     getGatewayStatus: vi.fn().mockResolvedValue({
       correlationId: crypto.randomUUID(),
       data: {
@@ -38,7 +56,10 @@ it('shows ready status, capability count and gateway probe', async () => {
 
   render(<App />);
   expect(screen.getByText('Carregando status…')).toBeInTheDocument();
-  expect(await screen.findByRole('heading', { name: 'TelemetryDesk pronto' })).toBeInTheDocument();
+
+  await flushEffects();
+
+  expect(screen.getByRole('heading', { name: 'TelemetryDesk pronto' })).toBeInTheDocument();
   expect(screen.getByText('1 de 6 capacidades disponíveis')).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Gateway' })).toBeInTheDocument();
   expect(screen.getByText('Host: 192.168.1.1')).toBeInTheDocument();
@@ -48,22 +69,7 @@ it('shows ready status, capability count and gateway probe', async () => {
 
 it('shows gateway typed error without leaking internals', async () => {
   window.telemetryDesk = {
-    getRuntimeStatus: vi.fn().mockResolvedValue({
-      correlationId: crypto.randomUUID(),
-      data: {
-        status: 'ready',
-        observedAtEpochMs: 1700000000000,
-        monotonicMs: 42,
-        capabilities: {
-          icmp: true,
-          wifiSignal: false,
-          wifiChannel: false,
-          wifiRoaming: false,
-          gpuMetrics: false,
-          networkInterfaceStats: false,
-        },
-      },
-    }),
+    getRuntimeStatus: vi.fn().mockResolvedValue(runtimeReady()),
     getGatewayStatus: vi.fn().mockResolvedValue({
       correlationId: crypto.randomUUID(),
       data: {
@@ -77,7 +83,9 @@ it('shows gateway typed error without leaking internals', async () => {
   };
 
   render(<App />);
-  expect(await screen.findByText('Latência: —')).toBeInTheDocument();
+  await flushEffects();
+
+  expect(screen.getByText('Latência: —')).toBeInTheDocument();
   expect(screen.getByText('Qualidade: timeout')).toBeInTheDocument();
 });
 
@@ -97,8 +105,47 @@ it('shows an error without leaking details', async () => {
   };
 
   render(<App />);
-  expect(await screen.findByRole('alert')).toHaveTextContent(
-    'Não foi possível obter o status local.',
-  );
+  await flushEffects();
+
+  expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível obter o status local.');
   expect(screen.queryByText('secret')).not.toBeInTheDocument();
+});
+
+it('updates gateway latency when a later poll returns a new value', async () => {
+  window.telemetryDesk = {
+    getRuntimeStatus: vi.fn().mockResolvedValue(runtimeReady()),
+    getGatewayStatus: vi
+      .fn()
+      .mockResolvedValueOnce({
+        correlationId: crypto.randomUUID(),
+        data: {
+          gatewayHost: '192.168.1.1',
+          latencyMs: 12,
+          quality: 'ok',
+          observedAtEpochMs: 1700000000000,
+          monotonicMs: 42,
+        },
+      })
+      .mockResolvedValueOnce({
+        correlationId: crypto.randomUUID(),
+        data: {
+          gatewayHost: '192.168.1.1',
+          latencyMs: 48,
+          quality: 'ok',
+          observedAtEpochMs: 1700000001000,
+          monotonicMs: 1042,
+        },
+      }),
+  };
+
+  render(<App />);
+  await flushEffects();
+  expect(screen.getByText('Latência: 12 ms')).toBeInTheDocument();
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000);
+  });
+  await flushEffects();
+
+  expect(screen.getByText('Latência: 48 ms')).toBeInTheDocument();
 });

@@ -7,7 +7,7 @@ export interface TelemetryDeskApi {
 
 declare global {
   interface Window {
-    telemetryDesk: TelemetryDeskApi;
+    telemetryDesk?: TelemetryDeskApi;
   }
 }
 
