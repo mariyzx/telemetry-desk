@@ -36,10 +36,16 @@ export function App() {
 
   useEffect(() => {
     let cancelled = false;
+    const api = window.telemetryDesk;
+
+    if (!api) {
+      setState({ kind: 'error' });
+      return;
+    }
 
     void Promise.all([
-      window.telemetryDesk.getRuntimeStatus(crypto.randomUUID()),
-      window.telemetryDesk.getGatewayStatus(crypto.randomUUID()),
+      api.getRuntimeStatus(crypto.randomUUID()),
+      api.getGatewayStatus(crypto.randomUUID()),
     ])
       .then(([runtime, gateway]) => {
         if (!cancelled) {
