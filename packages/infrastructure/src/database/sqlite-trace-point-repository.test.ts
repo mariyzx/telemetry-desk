@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createManualTracePoint } from '@telemetry-desk/domain';
+import { createAutomaticTracePoint, createManualTracePoint } from '@telemetry-desk/domain';
 import { openSqliteDatabase } from './open-sqlite-database.js';
 import { SqliteTracePointRepository } from './sqlite-trace-point-repository.js';
 
@@ -71,6 +71,56 @@ describe('SqliteTracePointRepository', () => {
       const listed = await repository.listRecent(10);
       expect(listed[0]?.state).toBe('finalized');
       expect(listed[0]?.endedAtEpochMs).toBe(1_700_000_600_000);
+    } finally {
+      database.close();
+    }
+  });
+
+  it('persists automatic TracePoint updates including post window and protected range end', async () => {
+    const dbPath = await createTempDbPath();
+    const database = openSqliteDatabase(dbPath);
+
+    try {
+      const repository = new SqliteTracePointRepository(database);
+      const tracePoint = createAutomaticTracePoint({
+        id: 'tp-auto',
+        evidenceId: 'ev-auto',
+        protectedRangeId: 'pr-auto',
+        triggeredAtEpochMs: 1_700_000_300_000,
+        trigger: {
+          kind: 'drop',
+          observedValue: 3,
+          baselineValue: null,
+          unit: 'consecutive_failures',
+          explanationCode: 'gateway_drop',
+        },
+      });
+
+      await repository.save(tracePoint);
+
+      const updated = {
+        ...tracePoint,
+        state: 'observing' as const,
+        postWindowEndEpochMs: 1_700_000_400_000,
+        protectedRanges: [
+          {
+            id: 'pr-auto',
+            startEpochMs: tracePoint.preWindowStartEpochMs,
+            endEpochMs: 1_700_000_400_000,
+          },
+        ],
+      };
+      await repository.update(updated);
+
+      const listed = await repository.listRecent(10);
+      expect(listed[0]).toMatchObject({
+        id: 'tp-auto',
+        origin: 'automatic',
+        state: 'observing',
+        triggerKind: 'drop',
+        postWindowEndEpochMs: 1_700_000_400_000,
+      });
+      expect(listed[0]?.protectedRanges[0]?.endEpochMs).toBe(1_700_000_400_000);
     } finally {
       database.close();
     }

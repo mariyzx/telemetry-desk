@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import {
   CachedGetGatewayStatusService,
   CreateManualTracePointService,
+  DetectAutomaticTracePointsService,
   FinalizeOpenTracePointsService,
   GatewaySamplePipeline,
   GetGatewayStatusService,
@@ -57,6 +58,11 @@ const finalizeOpenTracePointsService = new FinalizeOpenTracePointsService(
   clock,
   tracePointRepository,
 );
+const detectAutomaticTracePointsService = new DetectAutomaticTracePointsService({
+  clock,
+  repository: tracePointRepository,
+  createId: () => randomUUID(),
+});
 
 let stopping = false;
 
@@ -79,8 +85,9 @@ const stop = runCollector({
   stdout: process.stdout,
   clock,
   gatewayStatus: gatewayStatusService,
-  onGatewaySample: (status) => {
+  onGatewaySample: async (status) => {
     samplePipeline.record(status);
+    await detectAutomaticTracePointsService.execute(ringBuffer.toArray());
   },
   persistenceFlush: () => samplePipeline.flush(),
   createManualTracePoint: async () =>

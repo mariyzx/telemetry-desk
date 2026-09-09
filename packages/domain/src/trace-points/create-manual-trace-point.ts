@@ -2,7 +2,7 @@ export type TracePointOrigin = 'manual' | 'automatic';
 
 export type TracePointState = 'candidate' | 'observing' | 'confirmed' | 'recovering' | 'finalized';
 
-export type TracePointTriggerKind = 'manual';
+export type TracePointTriggerKind = 'manual' | 'drop' | 'loss' | 'latency' | 'jitter';
 
 export const TRACE_POINT_PRE_WINDOW_MS = 5 * 60 * 1000;
 export const TRACE_POINT_POST_WINDOW_MS = 5 * 60 * 1000;

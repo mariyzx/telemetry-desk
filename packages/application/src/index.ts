@@ -26,6 +26,8 @@ export { CreateManualTracePointService } from './services/create-manual-trace-po
 export type { CreateManualTracePointServiceDeps } from './services/create-manual-trace-point.service.js';
 export { ListRecentTracePointsService } from './services/list-recent-trace-points.service.js';
 export { FinalizeOpenTracePointsService } from './services/finalize-open-trace-points.service.js';
+export { DetectAutomaticTracePointsService } from './services/detect-automatic-trace-points.service.js';
+export type { DetectAutomaticTracePointsServiceDeps } from './services/detect-automatic-trace-points.service.js';
 export { startMonotonicInterval } from './scheduling/monotonic-interval.js';
 export type { MonotonicIntervalOptions } from './scheduling/monotonic-interval.js';
 export type { RuntimeStatus } from './services/get-runtime-status.service.js';

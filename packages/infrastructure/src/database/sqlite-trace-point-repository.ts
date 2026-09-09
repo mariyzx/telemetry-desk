@@ -68,18 +68,30 @@ export class SqliteTracePointRepository implements TracePointRepository {
   }
 
   update(tracePoint: TracePoint): Promise<void> {
-    this.database.db
-      .update(tracePoints)
-      .set({
-        state: tracePoint.state,
-        endedAtEpochMs: tracePoint.endedAtEpochMs,
-        severity: tracePoint.severity,
-        cause: tracePoint.cause,
-        confidence: tracePoint.confidence,
-        explanationCode: tracePoint.explanationCode,
-      })
-      .where(eq(tracePoints.id, tracePoint.id))
-      .run();
+    this.database.db.transaction((tx) => {
+      tx.update(tracePoints)
+        .set({
+          state: tracePoint.state,
+          endedAtEpochMs: tracePoint.endedAtEpochMs,
+          severity: tracePoint.severity,
+          cause: tracePoint.cause,
+          confidence: tracePoint.confidence,
+          explanationCode: tracePoint.explanationCode,
+          postWindowEndEpochMs: tracePoint.postWindowEndEpochMs,
+        })
+        .where(eq(tracePoints.id, tracePoint.id))
+        .run();
+
+      for (const range of tracePoint.protectedRanges) {
+        tx.update(protectedMetricRanges)
+          .set({
+            startEpochMs: range.startEpochMs,
+            endEpochMs: range.endEpochMs,
+          })
+          .where(eq(protectedMetricRanges.id, range.id))
+          .run();
+      }
+    });
 
     return Promise.resolve();
   }

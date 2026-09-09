@@ -15,3 +15,35 @@ export {
   createManualTracePoint,
   finalizeTracePointAfterPostWindow,
 } from './trace-points/create-manual-trace-point.js';
+export type { CreateAutomaticTracePointInput } from './trace-points/create-automatic-trace-point.js';
+export { createAutomaticTracePoint } from './trace-points/create-automatic-trace-point.js';
+export type {
+  DetectedTrigger,
+  DetectorSample,
+  GatewayTriggerKind,
+} from './diagnostics/detect-gateway-triggers.js';
+export {
+  BASELINE_MIN_SAMPLES,
+  BASELINE_WINDOW_MS,
+  DROP_CONSECUTIVE_FAILURES,
+  JITTER_THRESHOLD_MS,
+  JITTER_WINDOW_MS,
+  LATENCY_ABSOLUTE_THRESHOLD_MS,
+  LATENCY_BASELINE_ADD_MS,
+  LATENCY_BASELINE_MULTIPLIER,
+  LATENCY_WINDOW_MS,
+  LOSS_MIN_PROBES,
+  LOSS_RATIO_THRESHOLD,
+  LOSS_WINDOW_MS,
+  detectGatewayTriggers,
+  isGatewayDegraded,
+} from './diagnostics/detect-gateway-triggers.js';
+export type {
+  LifecycleAdvanceInput,
+  LifecycleAdvanceResult,
+} from './diagnostics/trace-point-lifecycle.js';
+export {
+  RECOVERY_STABLE_MS,
+  TRACE_POINT_COOLDOWN_MS,
+  advanceAutomaticTracePointLifecycle,
+} from './diagnostics/trace-point-lifecycle.js';

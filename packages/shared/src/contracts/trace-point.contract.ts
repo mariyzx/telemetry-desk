@@ -8,7 +8,7 @@ export const tracePointStateSchema = z.enum([
   'recovering',
   'finalized',
 ]);
-export const tracePointTriggerKindSchema = z.enum(['manual']);
+export const tracePointTriggerKindSchema = z.enum(['manual', 'drop', 'loss', 'latency', 'jitter']);
 
 export const tracePointSummarySchema = z
   .object({
