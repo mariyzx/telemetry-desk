@@ -1,14 +1,16 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, nativeImage, Tray } from 'electron';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GetRuntimeStatusService } from '@telemetry-desk/application';
 import { SystemClock } from '@telemetry-desk/infrastructure';
 import { getPlatformCapabilities } from '@telemetry-desk/platform';
 import { registerRuntimeIpc } from './ipc.js';
+import { createAppLifecycle } from './lifecycle.js';
+import { createAppTray } from './tray.js';
 import { createMainWindow } from './window.js';
 
 const directory = fileURLToPath(new URL('.', import.meta.url));
-let isQuitting = false;
+const lifecycle = createAppLifecycle();
 
 const clock = new SystemClock();
 const runtimeStatusService = new GetRuntimeStatusService(clock, () =>
@@ -18,21 +20,41 @@ const runtimeStatusService = new GetRuntimeStatusService(clock, () =>
 registerRuntimeIpc(ipcMain, runtimeStatusService);
 
 void app.whenReady().then(() => {
-  createMainWindow({
+  const mainWindow = createMainWindow({
     BrowserWindow,
     preloadPath: join(directory, '../preload/preload.js'),
     dashboardPath: join(directory, '../../../dashboard/dist/index.html'),
     devServerUrl: process.env['VITE_DEV_SERVER_URL'],
-    isQuitting: () => isQuitting,
+    isQuitting: () => lifecycle.isQuitting(),
+  });
+
+  const showDashboard = (): void => {
+    if (mainWindow.isDestroyed()) {
+      return;
+    }
+
+    mainWindow.show();
+    mainWindow.focus();
+  };
+
+  createAppTray({
+    Tray,
+    Menu,
+    nativeImage,
+    iconPath: join(directory, '../../assets/tray-icon.png'),
+    onOpenDashboard: showDashboard,
+    onQuit: () => {
+      lifecycle.requestQuit(() => {
+        app.quit();
+      });
+    },
   });
 });
 
 app.on('before-quit', () => {
-  isQuitting = true;
+  lifecycle.markQuitting();
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  // Tray apps stay alive until the user chooses Sair.
 });
