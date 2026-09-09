@@ -1,9 +1,4 @@
-export type ProbeQuality =
-  | 'ok'
-  | 'unsupported'
-  | 'permission_denied'
-  | 'timeout'
-  | 'unavailable';
+export type ProbeQuality = 'ok' | 'unsupported' | 'permission_denied' | 'timeout' | 'unavailable';
 
 export interface Clock {
   nowEpochMs(): number;

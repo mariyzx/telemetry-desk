@@ -1,0 +1,16 @@
+appId: com.telemetrydesk.app
+productName: TelemetryDesk
+directories:
+  output: ../../release
+files:
+  - dist/**/*
+  - ../dashboard/dist/**/*
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+artifactName: TelemetryDesk-${version}-${arch}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true

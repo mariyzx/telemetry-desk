@@ -11,8 +11,8 @@ const directory = fileURLToPath(new URL('.', import.meta.url));
 let isQuitting = false;
 
 const clock = new SystemClock();
-const runtimeStatusService = new GetRuntimeStatusService(clock, async () =>
-  getPlatformCapabilities(process.platform),
+const runtimeStatusService = new GetRuntimeStatusService(clock, () =>
+  Promise.resolve(getPlatformCapabilities(process.platform)),
 );
 
 registerRuntimeIpc(ipcMain, runtimeStatusService);

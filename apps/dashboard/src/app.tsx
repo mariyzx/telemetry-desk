@@ -6,7 +6,9 @@ type AppState =
   | { kind: 'success'; data: RuntimeStatusResponse['data'] }
   | { kind: 'error' };
 
-function countEnabledCapabilities(capabilities: RuntimeStatusResponse['data']['capabilities']): number {
+function countEnabledCapabilities(
+  capabilities: RuntimeStatusResponse['data']['capabilities'],
+): number {
   return Object.values(capabilities).filter(Boolean).length;
 }
 
@@ -55,9 +57,7 @@ export function App() {
   return (
     <main>
       <h1>TelemetryDesk pronto</h1>
-      <p>
-        {enabled} de 6 capacidades disponíveis
-      </p>
+      <p>{enabled} de 6 capacidades disponíveis</p>
     </main>
   );
 }

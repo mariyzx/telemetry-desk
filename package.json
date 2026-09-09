@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": ">=22 <23"
   },
   "workspaces": [
     "apps/*",
@@ -13,13 +13,21 @@
   "scripts": {
     "dev": "npm run dev -w @telemetry-desk/dashboard",
     "build": "npm run build -w @telemetry-desk/domain && npm run build -w @telemetry-desk/shared && npm run build -w @telemetry-desk/application && npm run build -w @telemetry-desk/platform && npm run build -w @telemetry-desk/infrastructure && npm run build -w @telemetry-desk/dashboard && npm run build -w @telemetry-desk/desktop",
+    "lint": "eslint . --max-warnings=0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "vitest run",
-    "verify": "npm run typecheck && npm test && npm run build"
+    "verify": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^26.4.0",
-    "typescript": "^7.0.2",
+    "eslint": "^10.10.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.6",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.70.0",
     "vitest": "^4.1.11"
   }
 }
