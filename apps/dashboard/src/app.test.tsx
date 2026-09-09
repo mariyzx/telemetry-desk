@@ -52,6 +52,11 @@ it('shows ready status, capability count and gateway probe', async () => {
         monotonicMs: 42,
       },
     }),
+    createManualTracePoint: vi.fn(),
+    listTracePoints: vi.fn().mockResolvedValue({
+      correlationId: crypto.randomUUID(),
+      data: { items: [] },
+    }),
   };
 
   render(<App />);
@@ -65,6 +70,52 @@ it('shows ready status, capability count and gateway probe', async () => {
   expect(screen.getByText('Host: 192.168.1.1')).toBeInTheDocument();
   expect(screen.getByText('Latência: 12 ms')).toBeInTheDocument();
   expect(screen.getByText('Qualidade: ok')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'TracePoints recentes' })).toBeInTheDocument();
+  expect(
+    screen.getByText('Nenhum TracePoint ainda. Use "Travou agora" no tray.'),
+  ).toBeInTheDocument();
+});
+
+it('shows a recent manual TracePoint in the list', async () => {
+  window.telemetryDesk = {
+    getRuntimeStatus: vi.fn().mockResolvedValue(runtimeReady()),
+    getGatewayStatus: vi.fn().mockResolvedValue({
+      correlationId: crypto.randomUUID(),
+      data: {
+        gatewayHost: '192.168.1.1',
+        latencyMs: 12,
+        quality: 'ok',
+        observedAtEpochMs: 1700000000000,
+        monotonicMs: 42,
+      },
+    }),
+    createManualTracePoint: vi.fn(),
+    listTracePoints: vi.fn().mockResolvedValue({
+      correlationId: crypto.randomUUID(),
+      data: {
+        items: [
+          {
+            id: 'tp-1',
+            origin: 'manual',
+            state: 'confirmed',
+            triggerKind: 'manual',
+            triggeredAtEpochMs: 1_700_000_300_000,
+            startedAtEpochMs: 1_700_000_300_000,
+            endedAtEpochMs: null,
+            explanationCode: 'manual_user_report',
+            preWindowStartEpochMs: 1_700_000_000_000,
+            postWindowEndEpochMs: 1_700_000_600_000,
+          },
+        ],
+      },
+    }),
+  };
+
+  render(<App />);
+  await flushEffects();
+
+  expect(screen.getByText('manual')).toBeInTheDocument();
+  expect(screen.getByText(/confirmed/)).toBeInTheDocument();
 });
 
 it('shows gateway typed error without leaking internals', async () => {
@@ -79,6 +130,11 @@ it('shows gateway typed error without leaking internals', async () => {
         observedAtEpochMs: 1700000000000,
         monotonicMs: 42,
       },
+    }),
+    createManualTracePoint: vi.fn(),
+    listTracePoints: vi.fn().mockResolvedValue({
+      correlationId: crypto.randomUUID(),
+      data: { items: [] },
     }),
   };
 
@@ -101,6 +157,11 @@ it('shows an error without leaking details', async () => {
         observedAtEpochMs: 1700000000000,
         monotonicMs: 42,
       },
+    }),
+    createManualTracePoint: vi.fn(),
+    listTracePoints: vi.fn().mockResolvedValue({
+      correlationId: crypto.randomUUID(),
+      data: { items: [] },
     }),
   };
 
@@ -136,6 +197,11 @@ it('updates gateway latency when a later poll returns a new value', async () => 
           monotonicMs: 1042,
         },
       }),
+    createManualTracePoint: vi.fn(),
+    listTracePoints: vi.fn().mockResolvedValue({
+      correlationId: crypto.randomUUID(),
+      data: { items: [] },
+    }),
   };
 
   render(<App />);

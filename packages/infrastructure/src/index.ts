@@ -11,9 +11,16 @@ export { decodeNdjsonChunk, encodeNdjsonLine } from './process-transport/ndjson-
 export { openSqliteDatabase } from './database/open-sqlite-database.js';
 export type { TelemetryDatabase } from './database/open-sqlite-database.js';
 export { SqliteNetworkSampleRepository } from './database/sqlite-network-sample-repository.js';
+export { SqliteTracePointRepository } from './database/sqlite-trace-point-repository.js';
 export {
   ensureDatabaseDirectory,
   resolveDatabasePath,
   resolveTempDatabasePath,
 } from './database/resolve-database-path.js';
-export { networkSamples, schemaMigrations } from './database/schema.js';
+export {
+  networkSamples,
+  protectedMetricRanges,
+  schemaMigrations,
+  tracePointEvidence,
+  tracePoints,
+} from './database/schema.js';

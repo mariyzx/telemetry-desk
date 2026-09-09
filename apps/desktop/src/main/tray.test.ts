@@ -1,7 +1,7 @@
 import { expect, it, vi } from 'vitest';
 import { createAppTray } from './tray.js';
 
-it('builds a tray menu that opens the dashboard and quits', () => {
+it('builds a tray menu that opens dashboard, creates TracePoint and quits', () => {
   const setContextMenu = vi.fn();
   const setToolTip = vi.fn();
   const on = vi.fn();
@@ -14,6 +14,7 @@ it('builds a tray menu that opens the dashboard and quits', () => {
   const createFromDataURL = vi.fn(() => ({ isEmpty: () => false }));
   const nativeImage = { createFromPath, createFromDataURL };
   const onOpenDashboard = vi.fn();
+  const onManualTracePoint = vi.fn();
   const onQuit = vi.fn();
 
   createAppTray({
@@ -22,6 +23,7 @@ it('builds a tray menu that opens the dashboard and quits', () => {
     nativeImage: nativeImage as never,
     iconPath: 'tray-icon.png',
     onOpenDashboard,
+    onManualTracePoint,
     onQuit,
   });
 
@@ -30,6 +32,7 @@ it('builds a tray menu that opens the dashboard and quits', () => {
   expect(buildFromTemplate).toHaveBeenCalledWith(
     expect.arrayContaining([
       expect.objectContaining({ label: 'Abrir dashboard' }),
+      expect.objectContaining({ label: 'Travou agora' }),
       expect.objectContaining({ label: 'Sair' }),
     ]),
   );
@@ -39,8 +42,10 @@ it('builds a tray menu that opens the dashboard and quits', () => {
     click?: () => void;
   }>;
   template.find((item) => item.label === 'Abrir dashboard')?.click?.();
+  template.find((item) => item.label === 'Travou agora')?.click?.();
   template.find((item) => item.label === 'Sair')?.click?.();
 
   expect(onOpenDashboard).toHaveBeenCalledTimes(1);
+  expect(onManualTracePoint).toHaveBeenCalledTimes(1);
   expect(onQuit).toHaveBeenCalledTimes(1);
 });

@@ -37,11 +37,25 @@ afterEach(() => {
   delete window.telemetryDesk;
 });
 
-it('starts loading then reports gateway success', async () => {
-  window.telemetryDesk = {
+function stubDesktopApi(
+  overrides: Partial<Window['telemetryDesk']> = {},
+): NonNullable<Window['telemetryDesk']> {
+  return {
     getRuntimeStatus: vi.fn(),
-    getGatewayStatus: vi.fn().mockResolvedValue(gatewayResponse()),
+    getGatewayStatus: vi.fn(),
+    createManualTracePoint: vi.fn(),
+    listTracePoints: vi.fn().mockResolvedValue({
+      correlationId: crypto.randomUUID(),
+      data: { items: [] },
+    }),
+    ...overrides,
   };
+}
+
+it('starts loading then reports gateway success', async () => {
+  window.telemetryDesk = stubDesktopApi({
+    getGatewayStatus: vi.fn().mockResolvedValue(gatewayResponse()),
+  });
 
   const { result } = renderHook(() => useGatewayStatus());
 
@@ -70,10 +84,9 @@ it('reports error when telemetryDesk API is missing', async () => {
 });
 
 it('reports error when gateway status request fails', async () => {
-  window.telemetryDesk = {
-    getRuntimeStatus: vi.fn(),
+  window.telemetryDesk = stubDesktopApi({
     getGatewayStatus: vi.fn().mockRejectedValue(new Error('secret')),
-  };
+  });
 
   const { result } = renderHook(() => useGatewayStatus());
 
@@ -88,10 +101,9 @@ it('polls gateway status about every second while mounted', async () => {
     .mockResolvedValueOnce(gatewayResponse({ latencyMs: 10 }))
     .mockResolvedValueOnce(gatewayResponse({ latencyMs: 25 }));
 
-  window.telemetryDesk = {
-    getRuntimeStatus: vi.fn(),
+  window.telemetryDesk = stubDesktopApi({
     getGatewayStatus,
-  };
+  });
 
   const { result } = renderHook(() => useGatewayStatus());
 
@@ -111,10 +123,9 @@ it('polls gateway status about every second while mounted', async () => {
 it('stops polling after unmount', async () => {
   const getGatewayStatus = vi.fn().mockResolvedValue(gatewayResponse());
 
-  window.telemetryDesk = {
-    getRuntimeStatus: vi.fn(),
+  window.telemetryDesk = stubDesktopApi({
     getGatewayStatus,
-  };
+  });
 
   const { unmount } = renderHook(() => useGatewayStatus());
 
@@ -148,10 +159,9 @@ it('keeps previous success reference when display values are unchanged', async (
       }),
     );
 
-  window.telemetryDesk = {
-    getRuntimeStatus: vi.fn(),
+  window.telemetryDesk = stubDesktopApi({
     getGatewayStatus,
-  };
+  });
 
   const { result } = renderHook(() => useGatewayStatus());
 

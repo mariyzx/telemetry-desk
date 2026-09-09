@@ -3,7 +3,13 @@ import {
   decodeNdjsonChunk,
   type CollectorProtocolClientOptions,
 } from '@telemetry-desk/infrastructure';
-import { COLLECTOR_COMMANDS, gatewayStatusDataSchema } from '@telemetry-desk/shared';
+import {
+  COLLECTOR_COMMANDS,
+  createManualTracePointResponseSchema,
+  gatewayStatusDataSchema,
+  listTracePointsResponseSchema,
+  type TracePointSummary,
+} from '@telemetry-desk/shared';
 import type { GatewayStatus } from '@telemetry-desk/application';
 
 export type CollectorHealth = 'starting' | 'healthy' | 'restarting' | 'degraded' | 'stopped';
@@ -41,6 +47,8 @@ export interface CollectorSupervisor {
   start: () => Promise<void>;
   stop: () => Promise<void>;
   getGatewayStatus: () => Promise<GatewayStatus>;
+  createManualTracePoint: () => Promise<TracePointSummary>;
+  listTracePoints: (limit?: number) => Promise<TracePointSummary[]>;
 }
 
 interface ActiveChild {
@@ -254,6 +262,28 @@ export function createCollectorSupervisor(
         return gatewayStatusDataSchema.parse(payload);
       } catch {
         return unavailableGatewayStatus(options.clock);
+      }
+    },
+
+    createManualTracePoint: async () => {
+      if (health === 'degraded' || health === 'stopped' || !active) {
+        throw new Error('collector unavailable');
+      }
+
+      const payload = await active.client.request(COLLECTOR_COMMANDS.createManualTracePoint, {});
+      return createManualTracePointResponseSchema.parse(payload);
+    },
+
+    listTracePoints: async (limit = 20) => {
+      if (health === 'degraded' || health === 'stopped' || !active) {
+        return [];
+      }
+
+      try {
+        const payload = await active.client.request(COLLECTOR_COMMANDS.listTracePoints, { limit });
+        return listTracePointsResponseSchema.shape.data.parse(payload).items;
+      } catch {
+        return [];
       }
     },
   };

@@ -29,6 +29,24 @@ export type {
   GatewayStatusResponse,
 } from './contracts/gateway-status.contract.js';
 export {
+  createManualTracePointIpcResponseSchema,
+  createManualTracePointRequestSchema,
+  createManualTracePointResponseSchema,
+  listTracePointsRequestSchema,
+  listTracePointsResponseSchema,
+  tracePointOriginSchema,
+  tracePointStateSchema,
+  tracePointSummarySchema,
+  tracePointTriggerKindSchema,
+} from './contracts/trace-point.contract.js';
+export type {
+  CreateManualTracePointIpcResponse,
+  CreateManualTracePointRequest,
+  ListTracePointsRequest,
+  ListTracePointsResponse,
+  TracePointSummary,
+} from './contracts/trace-point.contract.js';
+export {
   platformCapabilitiesSchema,
   runtimeStatusRequestSchema,
   runtimeStatusResponseSchema,

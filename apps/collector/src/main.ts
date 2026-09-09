@@ -1,8 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import {
   CachedGetGatewayStatusService,
+  CreateManualTracePointService,
+  FinalizeOpenTracePointsService,
   GatewaySamplePipeline,
   GetGatewayStatusService,
+  ListRecentTracePointsService,
   NetworkSamplePersistenceQueue,
   type NetworkSample,
 } from '@telemetry-desk/application';
@@ -11,10 +14,16 @@ import {
   openSqliteDatabase,
   resolveDatabasePath,
   SqliteNetworkSampleRepository,
+  SqliteTracePointRepository,
   SystemClock,
 } from '@telemetry-desk/infrastructure';
+import {
+  createManualTracePointResponseSchema,
+  listTracePointsResponseSchema,
+} from '@telemetry-desk/shared';
 import { createNetworkPorts } from './create-network-ports.js';
 import { runCollector } from './run-collector.js';
+import { toTracePointSummary } from './to-trace-point-summary.js';
 
 const clock = new SystemClock();
 const networkPorts = createNetworkPorts(process.platform);
@@ -27,14 +36,27 @@ const gatewayStatusService = new CachedGetGatewayStatusService(gatewayProbe);
 
 const dbPath = resolveDatabasePath();
 const database = openSqliteDatabase(dbPath);
-const repository = new SqliteNetworkSampleRepository(database);
+const networkSampleRepository = new SqliteNetworkSampleRepository(database);
+const tracePointRepository = new SqliteTracePointRepository(database);
 const ringBuffer = new RingBuffer<NetworkSample>(GATEWAY_RING_BUFFER_CAPACITY);
-const persistenceQueue = new NetworkSamplePersistenceQueue(repository);
+const persistenceQueue = new NetworkSamplePersistenceQueue(networkSampleRepository);
 const samplePipeline = new GatewaySamplePipeline({
   buffer: ringBuffer,
   queue: persistenceQueue,
   createId: () => randomUUID(),
 });
+
+const createManualTracePointService = new CreateManualTracePointService({
+  clock,
+  repository: tracePointRepository,
+  createId: () => randomUUID(),
+  flushPendingSamples: () => samplePipeline.flush(),
+});
+const listRecentTracePointsService = new ListRecentTracePointsService(tracePointRepository);
+const finalizeOpenTracePointsService = new FinalizeOpenTracePointsService(
+  clock,
+  tracePointRepository,
+);
 
 let stopping = false;
 
@@ -61,6 +83,17 @@ const stop = runCollector({
     samplePipeline.record(status);
   },
   persistenceFlush: () => samplePipeline.flush(),
+  createManualTracePoint: async () =>
+    createManualTracePointResponseSchema.parse(
+      toTracePointSummary(await createManualTracePointService.execute()),
+    ),
+  listTracePoints: async (limit) =>
+    listTracePointsResponseSchema.shape.data.parse({
+      items: (await listRecentTracePointsService.execute(limit)).map(toTracePointSummary),
+    }).items,
+  finalizeOpenTracePoints: async () => {
+    await finalizeOpenTracePointsService.execute();
+  },
   onShutdown: () => shutdown(),
 });
 

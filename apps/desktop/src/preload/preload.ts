@@ -6,6 +6,8 @@ import { contextBridge, ipcRenderer } from 'electron';
 const IPC_CHANNELS = {
   runtimeStatus: 'runtime:get-status',
   gatewayStatus: 'gateway:get-status',
+  createManualTracePoint: 'trace-point:create-manual',
+  listTracePoints: 'trace-point:list-recent',
 } as const;
 
 const api = {
@@ -14,6 +16,12 @@ const api = {
   },
   getGatewayStatus(correlationId: string) {
     return ipcRenderer.invoke(IPC_CHANNELS.gatewayStatus, { correlationId });
+  },
+  createManualTracePoint(correlationId: string) {
+    return ipcRenderer.invoke(IPC_CHANNELS.createManualTracePoint, { correlationId });
+  },
+  listTracePoints(correlationId: string, limit = 20) {
+    return ipcRenderer.invoke(IPC_CHANNELS.listTracePoints, { correlationId, limit });
   },
 };
 

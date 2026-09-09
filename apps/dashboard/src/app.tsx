@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { RuntimeStatusResponse } from '@telemetry-desk/shared';
 import { useGatewayStatus } from './hooks/use-gateway-status.js';
+import { useTracePoints } from './hooks/use-trace-points.js';
 
 type RuntimeState =
   | { kind: 'loading' }
@@ -30,9 +31,14 @@ function formatGatewayQuality(
   }
 }
 
+function formatTriggeredAt(epochMs: number): string {
+  return new Date(epochMs).toLocaleString();
+}
+
 export function App() {
   const [runtime, setRuntime] = useState<RuntimeState>({ kind: 'loading' });
   const gateway = useGatewayStatus();
+  const tracePoints = useTracePoints();
 
   useEffect(() => {
     let cancelled = false;
@@ -61,7 +67,7 @@ export function App() {
     };
   }, []);
 
-  if (runtime.kind === 'loading' || gateway.kind === 'loading') {
+  if (runtime.kind === 'loading' || gateway.kind === 'loading' || tracePoints.kind === 'loading') {
     return (
       <main>
         <p>Carregando status…</p>
@@ -69,7 +75,7 @@ export function App() {
     );
   }
 
-  if (runtime.kind === 'error' || gateway.kind === 'error') {
+  if (runtime.kind === 'error' || gateway.kind === 'error' || tracePoints.kind === 'error') {
     return (
       <main>
         <p role="alert">Não foi possível obter o status local.</p>
@@ -89,6 +95,21 @@ export function App() {
         <p>Host: {gateway.data.gatewayHost ?? 'indisponível'}</p>
         <p>Latência: {latencyLabel}</p>
         <p>Qualidade: {formatGatewayQuality(gateway.data.quality)}</p>
+      </section>
+      <section aria-labelledby="trace-points-heading">
+        <h2 id="trace-points-heading">TracePoints recentes</h2>
+        {tracePoints.items.length === 0 ? (
+          <p>Nenhum TracePoint ainda. Use "Travou agora" no tray.</p>
+        ) : (
+          <ul>
+            {tracePoints.items.map((item) => (
+              <li key={item.id}>
+                <strong>{item.origin}</strong> · {item.state} ·{' '}
+                {formatTriggeredAt(item.triggeredAtEpochMs)}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </main>
   );

@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 export const COLLECTOR_COMMANDS = {
   getGatewayStatus: 'collector:get-gateway-status',
+  createManualTracePoint: 'collector:create-manual-trace-point',
+  listTracePoints: 'collector:list-trace-points',
   shutdown: 'collector:shutdown',
 } as const;
 
@@ -11,6 +13,8 @@ export const COLLECTOR_EVENTS = {
 
 const collectorCommandValues = [
   COLLECTOR_COMMANDS.getGatewayStatus,
+  COLLECTOR_COMMANDS.createManualTracePoint,
+  COLLECTOR_COMMANDS.listTracePoints,
   COLLECTOR_COMMANDS.shutdown,
 ] as const;
 

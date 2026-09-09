@@ -10,6 +10,7 @@ export interface CreateAppTrayDeps {
   iconPath?: string;
   tooltip?: string;
   onOpenDashboard: () => void;
+  onManualTracePoint: () => void;
   onQuit: () => void;
 }
 
@@ -37,6 +38,12 @@ export function createAppTray(deps: CreateAppTrayDeps): ElectronTray {
       label: 'Abrir dashboard',
       click: () => {
         deps.onOpenDashboard();
+      },
+    },
+    {
+      label: 'Travou agora',
+      click: () => {
+        deps.onManualTracePoint();
       },
     },
     { type: 'separator' },

@@ -6,10 +6,16 @@ import {
   startMonotonicInterval,
 } from '@telemetry-desk/application';
 import { CollectorProtocolHost, decodeNdjsonChunk } from '@telemetry-desk/infrastructure';
-import { COLLECTOR_COMMANDS } from '@telemetry-desk/shared';
+import {
+  COLLECTOR_COMMANDS,
+  createManualTracePointResponseSchema,
+  listTracePointsResponseSchema,
+  type TracePointSummary,
+} from '@telemetry-desk/shared';
 
 const DEFAULT_GATEWAY_SAMPLE_INTERVAL_MS = 1_000;
 const DEFAULT_PERSISTENCE_FLUSH_INTERVAL_MS = 2_000;
+const DEFAULT_TRACE_POINT_FINALIZE_INTERVAL_MS = 5_000;
 
 export interface RunCollectorOptions {
   stdin: Readable;
@@ -20,9 +26,13 @@ export interface RunCollectorOptions {
   };
   onGatewaySample?: (status: GatewayStatus) => void | Promise<void>;
   persistenceFlush?: () => void | Promise<void>;
+  createManualTracePoint?: () => Promise<TracePointSummary>;
+  listTracePoints?: (limit: number) => Promise<TracePointSummary[]>;
+  finalizeOpenTracePoints?: () => void | Promise<void>;
   heartbeatIntervalMs?: number;
   gatewaySampleIntervalMs?: number;
   persistenceFlushIntervalMs?: number;
+  tracePointFinalizeIntervalMs?: number;
   setIntervalFn?: (fn: () => void, ms: number) => number;
   clearIntervalFn?: (id: number) => void;
   setTimeoutFn?: (fn: () => void, ms: number) => number;
@@ -36,6 +46,8 @@ export function runCollector(options: RunCollectorOptions): () => void {
     options.gatewaySampleIntervalMs ?? DEFAULT_GATEWAY_SAMPLE_INTERVAL_MS;
   const persistenceFlushIntervalMs =
     options.persistenceFlushIntervalMs ?? DEFAULT_PERSISTENCE_FLUSH_INTERVAL_MS;
+  const tracePointFinalizeIntervalMs =
+    options.tracePointFinalizeIntervalMs ?? DEFAULT_TRACE_POINT_FINALIZE_INTERVAL_MS;
   const setIntervalFn =
     options.setIntervalFn ?? ((fn, ms) => setInterval(fn, ms) as unknown as number);
   const clearIntervalFn =
@@ -62,6 +74,24 @@ export function runCollector(options: RunCollectorOptions): () => void {
     await options.onShutdown?.();
     return {};
   });
+
+  if (options.createManualTracePoint) {
+    host.setHandler(COLLECTOR_COMMANDS.createManualTracePoint, async () => {
+      const summary = await options.createManualTracePoint?.();
+      return createManualTracePointResponseSchema.parse(summary);
+    });
+  }
+
+  if (options.listTracePoints) {
+    host.setHandler(COLLECTOR_COMMANDS.listTracePoints, async (payload) => {
+      const limit =
+        typeof payload['limit'] === 'number' && Number.isFinite(payload['limit'])
+          ? Math.max(1, Math.min(100, Math.trunc(payload['limit'])))
+          : 20;
+      const items = await options.listTracePoints?.(limit);
+      return listTracePointsResponseSchema.shape.data.parse({ items });
+    });
+  }
 
   const onStdinData = (chunk: string | Buffer): void => {
     const text = typeof chunk === 'string' ? chunk : chunk.toString('utf8');
@@ -113,9 +143,24 @@ export function runCollector(options: RunCollectorOptions): () => void {
         })
       : () => undefined;
 
+  const stopTracePointFinalize =
+    typeof options.finalizeOpenTracePoints === 'function'
+      ? startMonotonicInterval({
+          clock: options.clock,
+          intervalMs: tracePointFinalizeIntervalMs,
+          leading: false,
+          onTick: async () => {
+            await options.finalizeOpenTracePoints?.();
+          },
+          setTimeoutFn,
+          clearTimeoutFn,
+        })
+      : () => undefined;
+
   return () => {
     stopGatewaySampling();
     stopPersistenceFlush();
+    stopTracePointFinalize();
     clearIntervalFn(heartbeatTimer);
     lineListeners.clear();
     options.stdin.off('data', onStdinData);

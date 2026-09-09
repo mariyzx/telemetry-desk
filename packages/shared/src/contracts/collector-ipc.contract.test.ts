@@ -25,6 +25,8 @@ describe('collector IPC protocol', () => {
 
   it('rejects unknown commands outside the allowlist', () => {
     expect(isAllowlistedCollectorCommand('collector:get-gateway-status')).toBe(true);
+    expect(isAllowlistedCollectorCommand('collector:create-manual-trace-point')).toBe(true);
+    expect(isAllowlistedCollectorCommand('collector:list-trace-points')).toBe(true);
     expect(isAllowlistedCollectorCommand('collector:drop-tables')).toBe(false);
 
     expect(() =>
