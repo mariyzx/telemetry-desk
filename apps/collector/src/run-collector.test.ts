@@ -8,6 +8,97 @@ import {
 } from '@telemetry-desk/infrastructure';
 import { runCollector } from './run-collector.js';
 
+describe('runCollector gateway sampling', () => {
+  it('samples gateway on a ~1s monotonic cadence and serves get-gateway-status from cache', async () => {
+    const pipe = createMemoryStdio();
+    const clock = { nowEpochMs: () => 1_700_000_000_000, monotonicMs: () => monotonic };
+    let monotonic = 0;
+    const timers = new Map<number, { due: number; fn: () => void }>();
+    let nextTimerId = 1;
+
+    const sample = vi
+      .fn()
+      .mockResolvedValueOnce({
+        gatewayHost: '192.168.1.1',
+        latencyMs: 10,
+        quality: 'ok' as const,
+        observedAtEpochMs: 1_700_000_000_000,
+        monotonicMs: 0,
+      })
+      .mockResolvedValueOnce({
+        gatewayHost: '192.168.1.1',
+        latencyMs: 14,
+        quality: 'ok' as const,
+        observedAtEpochMs: 1_700_000_001_000,
+        monotonicMs: 1_000,
+      });
+
+    const execute = vi.fn().mockResolvedValue({
+      gatewayHost: '192.168.1.1',
+      latencyMs: 10,
+      quality: 'ok' as const,
+      observedAtEpochMs: 1_700_000_000_000,
+      monotonicMs: 0,
+    });
+
+    const stop = runCollector({
+      stdin: pipe.parentToChild as unknown as Readable,
+      stdout: pipe.childToParent as unknown as Writable,
+      clock,
+      gatewayStatus: { execute, sample },
+      gatewaySampleIntervalMs: 1_000,
+      heartbeatIntervalMs: 60_000,
+      setIntervalFn: () => 99,
+      clearIntervalFn: () => undefined,
+      setTimeoutFn: (fn, ms) => {
+        const id = nextTimerId++;
+        timers.set(id, { due: monotonic + ms, fn });
+        return id;
+      },
+      clearTimeoutFn: (id) => {
+        timers.delete(id);
+      },
+    });
+
+    await Promise.resolve();
+    expect(sample).toHaveBeenCalledTimes(1);
+
+    const client = new CollectorProtocolClient({
+      write: (line) => pipe.parentToChild.write(line),
+      onLine: (listener) => {
+        pipe.childToParent.on('line', listener);
+      },
+      createId: () => '8bbf73d6-57ca-4fdd-9ce7-57bcd2404520',
+    });
+
+    await expect(client.request('collector:get-gateway-status', {})).resolves.toMatchObject({
+      latencyMs: 10,
+    });
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(sample).toHaveBeenCalledTimes(1);
+
+    await advance(1_000);
+    expect(sample).toHaveBeenCalledTimes(2);
+
+    stop();
+
+    async function advance(ms: number): Promise<void> {
+      const target = monotonic + ms;
+      while (true) {
+        const next = [...timers.entries()].sort((a, b) => a[1].due - b[1].due)[0];
+        if (!next || next[1].due > target) {
+          break;
+        }
+        timers.delete(next[0]);
+        monotonic = next[1].due;
+        next[1].fn();
+        await Promise.resolve();
+      }
+      monotonic = target;
+    }
+  });
+});
+
 describe('runCollector', () => {
   it('answers get-gateway-status through the typed child protocol', async () => {
     const pipe = createMemoryStdio();
