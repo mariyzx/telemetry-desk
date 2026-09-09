@@ -1,17 +1,19 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { IPC_CHANNELS } from '@telemetry-desk/shared/ipc-channels';
-import type { DesktopApi } from '../shared/desktop-api.js';
 
-const api: DesktopApi = {
-  getRuntimeStatus(correlationId) {
-    return ipcRenderer.invoke(IPC_CHANNELS.runtimeStatus, { correlationId }) as Promise<
-      Awaited<ReturnType<DesktopApi['getRuntimeStatus']>>
-    >;
+// Sandboxed preload runs as classic script (not Node ESM), so this file is
+// compiled separately to CommonJS. Channel names must stay aligned with
+// @telemetry-desk/shared IPC_CHANNELS - do not import that ESM package here.
+const IPC_CHANNELS = {
+  runtimeStatus: 'runtime:get-status',
+  gatewayStatus: 'gateway:get-status',
+} as const;
+
+const api = {
+  getRuntimeStatus(correlationId: string) {
+    return ipcRenderer.invoke(IPC_CHANNELS.runtimeStatus, { correlationId });
   },
-  getGatewayStatus(correlationId) {
-    return ipcRenderer.invoke(IPC_CHANNELS.gatewayStatus, { correlationId }) as Promise<
-      Awaited<ReturnType<DesktopApi['getGatewayStatus']>>
-    >;
+  getGatewayStatus(correlationId: string) {
+    return ipcRenderer.invoke(IPC_CHANNELS.gatewayStatus, { correlationId });
   },
 };
 

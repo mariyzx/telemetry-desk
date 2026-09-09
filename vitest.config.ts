@@ -18,6 +18,13 @@ export default defineConfig({
           include: ['apps/desktop/**/*.test.ts'],
         },
       },
+      {
+        test: {
+          name: 'collector',
+          environment: 'node',
+          include: ['apps/collector/**/*.test.ts'],
+        },
+      },
     ],
   },
 });

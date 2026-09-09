@@ -26,9 +26,21 @@ export function createMainWindow(deps: CreateMainWindowDeps): ElectronBrowserWin
 
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', (event, url) => {
-    if (url !== initialUrl) {
-      event.preventDefault();
+    if (url === initialUrl) {
+      return;
     }
+
+    if (deps.devServerUrl) {
+      try {
+        if (new URL(url).origin === new URL(deps.devServerUrl).origin) {
+          return;
+        }
+      } catch {
+        // Fall through to deny.
+      }
+    }
+
+    event.preventDefault();
   });
 
   window.on('close', (event) => {

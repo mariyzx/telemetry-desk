@@ -2,6 +2,24 @@ export const workspaceName = 'TelemetryDesk' as const;
 
 export { IPC_CHANNELS } from './contracts/ipc-channels.js';
 export {
+  COLLECTOR_COMMANDS,
+  COLLECTOR_EVENTS,
+  collectorCommandSchema,
+  collectorEventSchema,
+  collectorMessageSchema,
+  collectorRequestSchema,
+  collectorResponseSchema,
+  isAllowlistedCollectorCommand,
+} from './contracts/collector-ipc.contract.js';
+export type {
+  CollectorCommand,
+  CollectorEvent,
+  CollectorMessage,
+  CollectorRequest,
+  CollectorResponse,
+} from './contracts/collector-ipc.contract.js';
+export {
+  gatewayStatusDataSchema,
   gatewayStatusRequestSchema,
   gatewayStatusResponseSchema,
   probeQualitySchema,

@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { createNetworkPorts } from './network-ports.js';
+import { createNetworkPorts } from './create-network-ports.js';
 
 it('keeps non-Windows platforms unsupported without fake ICMP success', async () => {
   const ports = createNetworkPorts('linux');

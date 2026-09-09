@@ -1,33 +1,39 @@
 import { app, BrowserWindow, ipcMain, Menu, nativeImage, Tray } from 'electron';
+import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { GetGatewayStatusService, GetRuntimeStatusService } from '@telemetry-desk/application';
+import { GetRuntimeStatusService } from '@telemetry-desk/application';
 import { SystemClock } from '@telemetry-desk/infrastructure';
 import { getPlatformCapabilities } from '@telemetry-desk/platform';
+import { createCollectorSupervisor } from './collector-supervisor.js';
 import { registerGatewayIpc, registerRuntimeIpc } from './ipc.js';
 import { createAppLifecycle } from './lifecycle.js';
-import { createNetworkPorts } from './network-ports.js';
+import { spawnCollectorChild } from './spawn-collector.js';
 import { createAppTray } from './tray.js';
 import { createMainWindow } from './window.js';
 
 const directory = fileURLToPath(new URL('.', import.meta.url));
 const lifecycle = createAppLifecycle();
-
 const clock = new SystemClock();
+
 const runtimeStatusService = new GetRuntimeStatusService(clock, () =>
   Promise.resolve(getPlatformCapabilities(process.platform)),
 );
-const networkPorts = createNetworkPorts(process.platform);
-const gatewayStatusService = new GetGatewayStatusService(
+
+const collectorSupervisor = createCollectorSupervisor({
+  spawn: () => spawnCollectorChild(),
   clock,
-  networkPorts.gatewayResolver,
-  networkPorts.networkProbe,
-);
+  createId: () => randomUUID(),
+});
 
 registerRuntimeIpc(ipcMain, runtimeStatusService);
-registerGatewayIpc(ipcMain, gatewayStatusService);
+registerGatewayIpc(ipcMain, {
+  execute: () => collectorSupervisor.getGatewayStatus(),
+});
 
-void app.whenReady().then(() => {
+void app.whenReady().then(async () => {
+  await collectorSupervisor.start();
+
   const mainWindow = createMainWindow({
     BrowserWindow,
     preloadPath: join(directory, '../preload/preload.js'),
@@ -59,8 +65,17 @@ void app.whenReady().then(() => {
   });
 });
 
-app.on('before-quit', () => {
+app.on('before-quit', (event) => {
   lifecycle.markQuitting();
+
+  if (collectorSupervisor.getHealth() === 'stopped') {
+    return;
+  }
+
+  event.preventDefault();
+  void collectorSupervisor.stop().finally(() => {
+    app.quit();
+  });
 });
 
 app.on('window-all-closed', () => {

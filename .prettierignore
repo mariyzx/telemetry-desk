@@ -4,3 +4,5 @@ coverage
 release
 package-lock.json
 docs
+apps/desktop/scripts
+apps/desktop/diag-black-screen.mjs

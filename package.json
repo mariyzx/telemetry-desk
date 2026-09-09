@@ -11,8 +11,8 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev -w @telemetry-desk/dashboard",
-    "build": "npm run build -w @telemetry-desk/domain && npm run build -w @telemetry-desk/shared && npm run build -w @telemetry-desk/application && npm run build -w @telemetry-desk/platform && npm run build -w @telemetry-desk/infrastructure && npm run build -w @telemetry-desk/dashboard && npm run build -w @telemetry-desk/desktop",
+    "dev": "npm run dev -w @telemetry-desk/desktop",
+    "build": "npm run build -w @telemetry-desk/domain && npm run build -w @telemetry-desk/shared && npm run build -w @telemetry-desk/application && npm run build -w @telemetry-desk/platform && npm run build -w @telemetry-desk/infrastructure && npm run build -w @telemetry-desk/collector && npm run build -w @telemetry-desk/dashboard && npm run build -w @telemetry-desk/desktop",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

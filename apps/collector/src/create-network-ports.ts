@@ -2,10 +2,8 @@ import type { GatewayResolverPort, NetworkProbePort } from '@telemetry-desk/appl
 import { WindowsGatewayResolver, WindowsNetworkProbe } from '@telemetry-desk/platform';
 
 /**
- * Trade-off for this vertical slice: gateway resolve + ICMP probe run in the
- * Electron main process via platform adapters. The full design owns collection
- * in a supervised collector child; extract by moving this factory +
- * GetGatewayStatusService wiring into that child without changing ports/IPC.
+ * Gateway resolve + ICMP probe run inside the supervised collector child.
+ * Desktop main only supervises and forwards IPC; it does not call ping here.
  */
 export function createNetworkPorts(platform: NodeJS.Platform): {
   gatewayResolver: GatewayResolverPort;

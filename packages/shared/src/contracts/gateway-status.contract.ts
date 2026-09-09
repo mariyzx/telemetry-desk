@@ -1,11 +1,5 @@
 import { z } from 'zod';
 
-export const gatewayStatusRequestSchema = z
-  .object({
-    correlationId: z.string().uuid(),
-  })
-  .strict();
-
 export const probeQualitySchema = z.enum([
   'ok',
   'unsupported',
@@ -14,18 +8,26 @@ export const probeQualitySchema = z.enum([
   'unavailable',
 ]);
 
+export const gatewayStatusDataSchema = z
+  .object({
+    gatewayHost: z.union([z.string().ipv4(), z.string().ipv6()]).nullable(),
+    latencyMs: z.number().nonnegative().nullable(),
+    quality: probeQualitySchema,
+    observedAtEpochMs: z.number().int().nonnegative(),
+    monotonicMs: z.number().nonnegative(),
+  })
+  .strict();
+
+export const gatewayStatusRequestSchema = z
+  .object({
+    correlationId: z.string().uuid(),
+  })
+  .strict();
+
 export const gatewayStatusResponseSchema = z
   .object({
     correlationId: z.string().uuid(),
-    data: z
-      .object({
-        gatewayHost: z.union([z.string().ipv4(), z.string().ipv6()]).nullable(),
-        latencyMs: z.number().nonnegative().nullable(),
-        quality: probeQualitySchema,
-        observedAtEpochMs: z.number().int().nonnegative(),
-        monotonicMs: z.number().nonnegative(),
-      })
-      .strict(),
+    data: gatewayStatusDataSchema,
   })
   .strict();
 
