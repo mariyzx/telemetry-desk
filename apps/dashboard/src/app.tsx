@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
-import type { RuntimeStatusResponse } from '@telemetry-desk/shared';
+import type { GatewayStatusResponse, RuntimeStatusResponse } from '@telemetry-desk/shared';
 
 type AppState =
   | { kind: 'loading' }
-  | { kind: 'success'; data: RuntimeStatusResponse['data'] }
+  | {
+      kind: 'success';
+      runtime: RuntimeStatusResponse['data'];
+      gateway: GatewayStatusResponse['data'];
+    }
   | { kind: 'error' };
 
 function countEnabledCapabilities(
@@ -12,17 +16,38 @@ function countEnabledCapabilities(
   return Object.values(capabilities).filter(Boolean).length;
 }
 
+function formatGatewayQuality(quality: GatewayStatusResponse['data']['quality']): string {
+  switch (quality) {
+    case 'ok':
+      return 'ok';
+    case 'timeout':
+      return 'timeout';
+    case 'permission_denied':
+      return 'permission_denied';
+    case 'unsupported':
+      return 'unsupported';
+    case 'unavailable':
+      return 'unavailable';
+  }
+}
+
 export function App() {
   const [state, setState] = useState<AppState>({ kind: 'loading' });
 
   useEffect(() => {
     let cancelled = false;
 
-    void window.telemetryDesk
-      .getRuntimeStatus(crypto.randomUUID())
-      .then((response) => {
+    void Promise.all([
+      window.telemetryDesk.getRuntimeStatus(crypto.randomUUID()),
+      window.telemetryDesk.getGatewayStatus(crypto.randomUUID()),
+    ])
+      .then(([runtime, gateway]) => {
         if (!cancelled) {
-          setState({ kind: 'success', data: response.data });
+          setState({
+            kind: 'success',
+            runtime: runtime.data,
+            gateway: gateway.data,
+          });
         }
       })
       .catch(() => {
@@ -52,12 +77,19 @@ export function App() {
     );
   }
 
-  const enabled = countEnabledCapabilities(state.data.capabilities);
+  const enabled = countEnabledCapabilities(state.runtime.capabilities);
+  const latencyLabel = state.gateway.latencyMs === null ? '—' : `${state.gateway.latencyMs} ms`;
 
   return (
     <main>
       <h1>TelemetryDesk pronto</h1>
       <p>{enabled} de 6 capacidades disponíveis</p>
+      <section aria-labelledby="gateway-heading">
+        <h2 id="gateway-heading">Gateway</h2>
+        <p>Host: {state.gateway.gatewayHost ?? 'indisponível'}</p>
+        <p>Latência: {latencyLabel}</p>
+        <p>Qualidade: {formatGatewayQuality(state.gateway.quality)}</p>
+      </section>
     </main>
   );
 }

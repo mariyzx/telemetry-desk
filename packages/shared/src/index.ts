@@ -2,6 +2,15 @@ export const workspaceName = 'TelemetryDesk' as const;
 
 export { IPC_CHANNELS } from './contracts/ipc-channels.js';
 export {
+  gatewayStatusRequestSchema,
+  gatewayStatusResponseSchema,
+  probeQualitySchema,
+} from './contracts/gateway-status.contract.js';
+export type {
+  GatewayStatusRequest,
+  GatewayStatusResponse,
+} from './contracts/gateway-status.contract.js';
+export {
   platformCapabilitiesSchema,
   runtimeStatusRequestSchema,
   runtimeStatusResponseSchema,

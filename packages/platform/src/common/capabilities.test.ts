@@ -1,9 +1,9 @@
 import { expect, it } from 'vitest';
 import { getPlatformCapabilities } from './capabilities.js';
 
-it('publishes conservative Windows scaffold capabilities', () => {
+it('publishes Windows capabilities with real ICMP support', () => {
   expect(getPlatformCapabilities('win32')).toEqual({
-    icmp: false,
+    icmp: true,
     wifiSignal: false,
     wifiChannel: false,
     wifiRoaming: false,

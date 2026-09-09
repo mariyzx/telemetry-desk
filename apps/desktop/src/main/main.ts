@@ -1,11 +1,12 @@
 import { app, BrowserWindow, ipcMain, Menu, nativeImage, Tray } from 'electron';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { GetRuntimeStatusService } from '@telemetry-desk/application';
+import { GetGatewayStatusService, GetRuntimeStatusService } from '@telemetry-desk/application';
 import { SystemClock } from '@telemetry-desk/infrastructure';
 import { getPlatformCapabilities } from '@telemetry-desk/platform';
-import { registerRuntimeIpc } from './ipc.js';
+import { registerGatewayIpc, registerRuntimeIpc } from './ipc.js';
 import { createAppLifecycle } from './lifecycle.js';
+import { createNetworkPorts } from './network-ports.js';
 import { createAppTray } from './tray.js';
 import { createMainWindow } from './window.js';
 
@@ -16,8 +17,15 @@ const clock = new SystemClock();
 const runtimeStatusService = new GetRuntimeStatusService(clock, () =>
   Promise.resolve(getPlatformCapabilities(process.platform)),
 );
+const networkPorts = createNetworkPorts(process.platform);
+const gatewayStatusService = new GetGatewayStatusService(
+  clock,
+  networkPorts.gatewayResolver,
+  networkPorts.networkProbe,
+);
 
 registerRuntimeIpc(ipcMain, runtimeStatusService);
+registerGatewayIpc(ipcMain, gatewayStatusService);
 
 void app.whenReady().then(() => {
   const mainWindow = createMainWindow({

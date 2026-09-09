@@ -1,7 +1,7 @@
 import type { PlatformCapabilities } from '@telemetry-desk/domain';
 
 export const windowsCapabilities: Readonly<PlatformCapabilities> = Object.freeze({
-  icmp: false,
+  icmp: true,
   wifiSignal: false,
   wifiChannel: false,
   wifiRoaming: false,

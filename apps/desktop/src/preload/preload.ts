@@ -8,6 +8,11 @@ const api: DesktopApi = {
       Awaited<ReturnType<DesktopApi['getRuntimeStatus']>>
     >;
   },
+  getGatewayStatus(correlationId) {
+    return ipcRenderer.invoke(IPC_CHANNELS.gatewayStatus, { correlationId }) as Promise<
+      Awaited<ReturnType<DesktopApi['getGatewayStatus']>>
+    >;
+  },
 };
 
 contextBridge.exposeInMainWorld('telemetryDesk', Object.freeze(api));
