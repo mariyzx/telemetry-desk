@@ -7,6 +7,9 @@ export interface CreateAppTrayDeps {
     createFromPath: (path: string) => NativeImage;
     createFromDataURL: (dataURL: string) => NativeImage;
   };
+  /** Candidate icon paths (e.g. .ico then .png). First non-empty NativeImage wins. */
+  iconPaths?: string[];
+  /** @deprecated Prefer iconPaths. Kept for callers/tests that pass a single path. */
   iconPath?: string;
   tooltip?: string;
   onOpenDashboard: () => void;
@@ -14,15 +17,33 @@ export interface CreateAppTrayDeps {
   onQuit: () => void;
 }
 
-/** 16×16 teal PNG placeholder for tray until a branded icon ships. */
+/**
+ * Valid 16×16 teal PNG with white rim — visible on light and dark Windows taskbars.
+ * Previous placeholder was a corrupt zlib stream; NativeImage treated it as empty.
+ */
 const PLACEHOLDER_TRAY_ICON_DATA_URL =
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAKElEQVQ4T2NkYGD4z0ABYBzVMKoBVAOIYQDVQKqB1DBqAI0NGAB9wwQBf9sH+gAAAABJRU5ErkJggg==';
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAI0lEQVR42mNgoAb4TyagvgG6V/YThUcNGDWAtgYMXF6gBAAAnCiRO1bTutMAAAAASUVORK5CYII=';
+
+function normalizeTrayIcon(image: NativeImage): NativeImage {
+  const { width, height } = image.getSize();
+  if (width === 16 && height === 16) {
+    return image;
+  }
+
+  if (typeof image.resize === 'function') {
+    return image.resize({ width: 16, height: 16 });
+  }
+
+  return image;
+}
 
 function resolveTrayIcon(deps: CreateAppTrayDeps): NativeImage {
-  if (deps.iconPath) {
-    const fromPath = deps.nativeImage.createFromPath(deps.iconPath);
+  const candidates = [...(deps.iconPaths ?? []), ...(deps.iconPath ? [deps.iconPath] : [])];
+
+  for (const path of candidates) {
+    const fromPath = deps.nativeImage.createFromPath(path);
     if (!fromPath.isEmpty()) {
-      return fromPath;
+      return normalizeTrayIcon(fromPath);
     }
   }
 

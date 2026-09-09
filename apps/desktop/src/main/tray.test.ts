@@ -1,6 +1,18 @@
 import { expect, it, vi } from 'vitest';
 import { createAppTray } from './tray.js';
 
+function createNativeImageMock(options?: { empty?: boolean; width?: number; height?: number }) {
+  const width = options?.width ?? 16;
+  const height = options?.height ?? 16;
+  return {
+    isEmpty: () => options?.empty ?? false,
+    getSize: () => ({ width, height }),
+    resize: vi.fn(({ width: w, height: h }: { width: number; height: number }) =>
+      createNativeImageMock({ width: w, height: h }),
+    ),
+  };
+}
+
 it('builds a tray menu that opens dashboard, creates TracePoint and quits', () => {
   const setContextMenu = vi.fn();
   const setToolTip = vi.fn();
@@ -10,8 +22,8 @@ it('builds a tray menu that opens dashboard, creates TracePoint and quits', () =
   });
   const buildFromTemplate = vi.fn((template: unknown) => template);
   const Menu = { buildFromTemplate };
-  const createFromPath = vi.fn(() => ({ isEmpty: () => false }));
-  const createFromDataURL = vi.fn(() => ({ isEmpty: () => false }));
+  const createFromPath = vi.fn(() => createNativeImageMock());
+  const createFromDataURL = vi.fn(() => createNativeImageMock());
   const nativeImage = { createFromPath, createFromDataURL };
   const onOpenDashboard = vi.fn();
   const onManualTracePoint = vi.fn();
@@ -48,4 +60,28 @@ it('builds a tray menu that opens dashboard, creates TracePoint and quits', () =
   expect(onOpenDashboard).toHaveBeenCalledTimes(1);
   expect(onManualTracePoint).toHaveBeenCalledTimes(1);
   expect(onQuit).toHaveBeenCalledTimes(1);
+});
+
+it('falls back to data-URL icon when path images are empty', () => {
+  const Tray = vi.fn(function (this: object) {
+    return Object.assign(this, { setContextMenu: vi.fn(), setToolTip: vi.fn(), on: vi.fn() });
+  });
+  const empty = createNativeImageMock({ empty: true });
+  const fromDataURL = createNativeImageMock();
+  const createFromPath = vi.fn(() => empty);
+  const createFromDataURL = vi.fn(() => fromDataURL);
+
+  createAppTray({
+    Tray: Tray as never,
+    Menu: { buildFromTemplate: vi.fn(() => ({})) } as never,
+    nativeImage: { createFromPath, createFromDataURL } as never,
+    iconPaths: ['missing.ico', 'missing.png'],
+    onOpenDashboard: vi.fn(),
+    onManualTracePoint: vi.fn(),
+    onQuit: vi.fn(),
+  });
+
+  expect(createFromPath).toHaveBeenCalledTimes(2);
+  expect(createFromDataURL).toHaveBeenCalledTimes(1);
+  expect(Tray).toHaveBeenCalledWith(fromDataURL);
 });

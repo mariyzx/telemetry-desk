@@ -58,11 +58,13 @@ void app.whenReady().then(async () => {
     mainWindow.focus();
   };
 
+  const assetsDir = join(directory, '../../assets');
   const tray = createAppTray({
     Tray,
     Menu,
     nativeImage,
-    iconPath: join(directory, '../../assets/tray-icon.png'),
+    // Windows tray prefers .ico; PNG is the cross-platform fallback.
+    iconPaths: [join(assetsDir, 'tray-icon.ico'), join(assetsDir, 'tray-icon.png')],
     onOpenDashboard: showDashboard,
     onManualTracePoint: () => {
       void collectorSupervisor
