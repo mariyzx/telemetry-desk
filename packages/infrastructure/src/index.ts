@@ -8,3 +8,12 @@ export type {
   LineTransport,
 } from './process-transport/collector-protocol-session.js';
 export { decodeNdjsonChunk, encodeNdjsonLine } from './process-transport/ndjson-framing.js';
+export { openSqliteDatabase } from './database/open-sqlite-database.js';
+export type { TelemetryDatabase } from './database/open-sqlite-database.js';
+export { SqliteNetworkSampleRepository } from './database/sqlite-network-sample-repository.js';
+export {
+  ensureDatabaseDirectory,
+  resolveDatabasePath,
+  resolveTempDatabasePath,
+} from './database/resolve-database-path.js';
+export { networkSamples, schemaMigrations } from './database/schema.js';

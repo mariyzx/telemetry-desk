@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@telemetry-desk/application": "^0.1.0",
+    "@telemetry-desk/domain": "^0.1.0",
     "@telemetry-desk/infrastructure": "^0.1.0",
     "@telemetry-desk/platform": "^0.1.0",
     "@telemetry-desk/shared": "^0.1.0"

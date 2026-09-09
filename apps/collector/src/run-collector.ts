@@ -1,6 +1,7 @@
 import type { Readable, Writable } from 'node:stream';
 import {
   type Clock,
+  type GatewayStatus,
   type GetGatewayStatusService,
   startMonotonicInterval,
 } from '@telemetry-desk/application';
@@ -8,27 +9,33 @@ import { CollectorProtocolHost, decodeNdjsonChunk } from '@telemetry-desk/infras
 import { COLLECTOR_COMMANDS } from '@telemetry-desk/shared';
 
 const DEFAULT_GATEWAY_SAMPLE_INTERVAL_MS = 1_000;
+const DEFAULT_PERSISTENCE_FLUSH_INTERVAL_MS = 2_000;
 
 export interface RunCollectorOptions {
   stdin: Readable;
   stdout: Writable;
   clock: Clock;
   gatewayStatus: Pick<GetGatewayStatusService, 'execute'> & {
-    sample?: () => Promise<unknown>;
+    sample?: () => Promise<GatewayStatus>;
   };
+  onGatewaySample?: (status: GatewayStatus) => void | Promise<void>;
+  persistenceFlush?: () => void | Promise<void>;
   heartbeatIntervalMs?: number;
   gatewaySampleIntervalMs?: number;
+  persistenceFlushIntervalMs?: number;
   setIntervalFn?: (fn: () => void, ms: number) => number;
   clearIntervalFn?: (id: number) => void;
   setTimeoutFn?: (fn: () => void, ms: number) => number;
   clearTimeoutFn?: (id: number) => void;
-  onShutdown?: () => void;
+  onShutdown?: () => void | Promise<void>;
 }
 
 export function runCollector(options: RunCollectorOptions): () => void {
   const heartbeatIntervalMs = options.heartbeatIntervalMs ?? 5_000;
   const gatewaySampleIntervalMs =
     options.gatewaySampleIntervalMs ?? DEFAULT_GATEWAY_SAMPLE_INTERVAL_MS;
+  const persistenceFlushIntervalMs =
+    options.persistenceFlushIntervalMs ?? DEFAULT_PERSISTENCE_FLUSH_INTERVAL_MS;
   const setIntervalFn =
     options.setIntervalFn ?? ((fn, ms) => setInterval(fn, ms) as unknown as number);
   const clearIntervalFn =
@@ -51,9 +58,9 @@ export function runCollector(options: RunCollectorOptions): () => void {
   });
 
   host.setHandler(COLLECTOR_COMMANDS.getGatewayStatus, async () => options.gatewayStatus.execute());
-  host.setHandler(COLLECTOR_COMMANDS.shutdown, () => {
-    options.onShutdown?.();
-    return Promise.resolve({});
+  host.setHandler(COLLECTOR_COMMANDS.shutdown, async () => {
+    await options.onShutdown?.();
+    return {};
   });
 
   const onStdinData = (chunk: string | Buffer): void => {
@@ -82,7 +89,24 @@ export function runCollector(options: RunCollectorOptions): () => void {
           clock: options.clock,
           intervalMs: gatewaySampleIntervalMs,
           onTick: async () => {
-            await options.gatewayStatus.sample?.();
+            const status = await options.gatewayStatus.sample?.();
+            if (status !== undefined) {
+              await options.onGatewaySample?.(status);
+            }
+          },
+          setTimeoutFn,
+          clearTimeoutFn,
+        })
+      : () => undefined;
+
+  const stopPersistenceFlush =
+    typeof options.persistenceFlush === 'function'
+      ? startMonotonicInterval({
+          clock: options.clock,
+          intervalMs: persistenceFlushIntervalMs,
+          leading: false,
+          onTick: async () => {
+            await options.persistenceFlush?.();
           },
           setTimeoutFn,
           clearTimeoutFn,
@@ -91,6 +115,7 @@ export function runCollector(options: RunCollectorOptions): () => void {
 
   return () => {
     stopGatewaySampling();
+    stopPersistenceFlush();
     clearIntervalFn(heartbeatTimer);
     lineListeners.clear();
     options.stdin.off('data', onStdinData);

@@ -8,7 +8,7 @@ import { getPlatformCapabilities } from '@telemetry-desk/platform';
 import { createCollectorSupervisor } from './collector-supervisor.js';
 import { registerGatewayIpc, registerRuntimeIpc } from './ipc.js';
 import { createAppLifecycle } from './lifecycle.js';
-import { spawnCollectorChild } from './spawn-collector.js';
+import { resolveCollectorDatabasePath, spawnCollectorChild } from './spawn-collector.js';
 import { createAppTray } from './tray.js';
 import { createMainWindow } from './window.js';
 
@@ -21,7 +21,10 @@ const runtimeStatusService = new GetRuntimeStatusService(clock, () =>
 );
 
 const collectorSupervisor = createCollectorSupervisor({
-  spawn: () => spawnCollectorChild(),
+  spawn: () =>
+    spawnCollectorChild({
+      databasePath: resolveCollectorDatabasePath(app.getPath('userData')),
+    }),
   clock,
   createId: () => randomUUID(),
 });

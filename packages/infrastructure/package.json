@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@telemetry-desk/application": "^0.1.0",
-    "@telemetry-desk/shared": "^0.1.0"
+    "@telemetry-desk/shared": "^0.1.0",
+    "drizzle-orm": "^1.0.0-rc.4"
   },
   "devDependencies": {
     "@types/node": "^26.5.0"

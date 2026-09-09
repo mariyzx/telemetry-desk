@@ -46,6 +46,23 @@ export interface NotificationPort {
   show(title: string, body: string): Promise<void>;
 }
 
+export type NetworkTargetRole = 'gateway' | 'internet' | 'game';
+
+export interface NetworkSample {
+  id: string;
+  observedAtEpochMs: number;
+  targetRole: NetworkTargetRole;
+  targetHost: string | null;
+  interfaceId: string | null;
+  latencyMs: number | null;
+  jitterMs: number | null;
+  sent: number;
+  received: number;
+  lossRatio: number | null;
+  quality: ProbeQuality;
+  errorCode: string | null;
+}
+
 export interface MetricRepository {
-  append(sample: unknown): Promise<void>;
+  appendNetworkSamples(samples: readonly NetworkSample[]): Promise<void>;
 }
