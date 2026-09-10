@@ -188,4 +188,42 @@ describe('DetectAutomaticTracePointsService', () => {
     expect(await service.execute(samples)).toHaveLength(0);
     expect(repo.save).not.toHaveBeenCalled();
   });
+
+  it('fills local_network diagnosis when an automatic TracePoint becomes confirmed', async () => {
+    let now = BASE + 3000;
+    const clock: Clock = {
+      nowEpochMs: () => now,
+      monotonicMs: () => 0,
+    };
+    const repo = createRepo();
+    let idSeq = 0;
+    const service = new DetectAutomaticTracePointsService({
+      clock,
+      repository: repo,
+      createId: () => `id-${++idSeq}`,
+    });
+
+    const samples = [
+      gatewaySample(0, true),
+      gatewaySample(1000, false),
+      gatewaySample(2000, false),
+      gatewaySample(3000, false),
+    ];
+    await service.execute(samples);
+
+    now = BASE + 4000;
+    await service.execute([...samples, gatewaySample(4000, false)]);
+    expect(repo.saved.find((tp) => tp.origin === 'automatic')?.state).toBe('observing');
+
+    now = BASE + 5000;
+    await service.execute([...samples, gatewaySample(4000, false), gatewaySample(5000, false)]);
+
+    const confirmed = repo.saved.find((tp) => tp.origin === 'automatic');
+    expect(confirmed).toMatchObject({
+      state: 'confirmed',
+      cause: 'local_network',
+      confidence: 0.65,
+      explanationCode: 'diag_local_network_gateway_degraded',
+    });
+  });
 });

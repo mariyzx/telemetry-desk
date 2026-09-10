@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { RuntimeStatusResponse } from '@telemetry-desk/shared';
+import { TracePointDiagnosisBlock } from './components/trace-point-diagnosis.js';
 import { useGatewayStatus } from './hooks/use-gateway-status.js';
 import { useTracePoints } from './hooks/use-trace-points.js';
 
@@ -140,7 +141,10 @@ export function App() {
         ) : (
           <ul>
             {tracePoints.items.map((item) => (
-              <li key={item.id}>{formatTracePointSummary(item)}</li>
+              <li key={item.id}>
+                <div>{formatTracePointSummary(item)}</div>
+                <TracePointDiagnosisBlock cause={item.cause} confidence={item.confidence} />
+              </li>
             ))}
           </ul>
         )}

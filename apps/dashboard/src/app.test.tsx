@@ -103,7 +103,9 @@ it('shows a recent manual TracePoint in the list', async () => {
             triggeredAtEpochMs: 1_700_000_300_000,
             startedAtEpochMs: 1_700_000_300_000,
             endedAtEpochMs: null,
-            explanationCode: 'manual_user_report',
+            cause: 'inconclusive',
+            confidence: 0.2,
+            explanationCode: 'diag_inconclusive_insufficient_evidence',
             preWindowStartEpochMs: 1_700_000_000_000,
             postWindowEndEpochMs: 1_700_000_600_000,
           },
@@ -118,6 +120,11 @@ it('shows a recent manual TracePoint in the list', async () => {
   expect(screen.getByText(/Manual · Confirmado ·/)).toBeInTheDocument();
   expect(screen.queryByText('manual')).not.toBeInTheDocument();
   expect(screen.queryByText(/confirmed/)).not.toBeInTheDocument();
+  expect(
+    screen.getByText(
+      'Causa provável: Inconclusivo · Confiança estimada: 20% (não é certeza absoluta)',
+    ),
+  ).toBeInTheDocument();
 });
 
 it('shows gateway typed error without leaking internals', async () => {

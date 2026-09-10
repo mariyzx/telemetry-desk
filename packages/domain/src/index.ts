@@ -47,3 +47,15 @@ export {
   TRACE_POINT_COOLDOWN_MS,
   advanceAutomaticTracePointLifecycle,
 } from './diagnostics/trace-point-lifecycle.js';
+export type {
+  DiagnosisSignals,
+  ProbableCause,
+  TargetHealth,
+  TracePointDiagnosis,
+} from './diagnostics/classify-trace-point-diagnosis.js';
+export {
+  applyTracePointDiagnosis,
+  classifyTracePointDiagnosis,
+  gatewayHealthFromDegraded,
+  unknownDiagnosisSignals,
+} from './diagnostics/classify-trace-point-diagnosis.js';

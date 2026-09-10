@@ -1,8 +1,11 @@
 import {
   advanceAutomaticTracePointLifecycle,
+  applyTracePointDiagnosis,
+  classifyTracePointDiagnosis,
   createAutomaticTracePoint,
   detectGatewayTriggers,
   TRACE_POINT_COOLDOWN_MS,
+  unknownDiagnosisSignals,
   type DetectorSample,
   type TracePoint,
 } from '@telemetry-desk/domain';
@@ -31,7 +34,36 @@ function sameTracePoint(a: TracePoint, b: TracePoint): boolean {
     a.state === b.state &&
     a.endedAtEpochMs === b.endedAtEpochMs &&
     a.postWindowEndEpochMs === b.postWindowEndEpochMs &&
-    a.protectedRanges[0]?.endEpochMs === b.protectedRanges[0]?.endEpochMs
+    a.protectedRanges[0]?.endEpochMs === b.protectedRanges[0]?.endEpochMs &&
+    a.cause === b.cause &&
+    a.confidence === b.confidence &&
+    a.explanationCode === b.explanationCode
+  );
+}
+
+function hasGatewayDegradationEvidence(tracePoint: TracePoint): boolean {
+  return tracePoint.evidence.some(
+    (item) => item.targetRole === 'gateway' && item.type.startsWith('gateway_'),
+  );
+}
+
+function diagnoseConfirmedAutomatic(
+  previous: TracePoint,
+  next: TracePoint,
+  degraded: boolean,
+): TracePoint {
+  if (previous.state === 'confirmed' || next.state !== 'confirmed' || next.cause !== null) {
+    return next;
+  }
+
+  const gatewayBad = degraded || hasGatewayDegradationEvidence(next);
+  return applyTracePointDiagnosis(
+    next,
+    classifyTracePointDiagnosis(
+      unknownDiagnosisSignals({
+        gateway: gatewayBad ? 'bad' : 'unknown',
+      }),
+    ),
   );
 }
 
@@ -58,8 +90,9 @@ export class DetectAutomaticTracePointsService {
           stableSinceEpochMs: this.stableSinceById.get(current.id) ?? null,
         });
         this.stableSinceById.set(current.id, advanced.stableSinceEpochMs);
-        if (!sameTracePoint(current, advanced.tracePoint)) {
-          await this.deps.repository.update(advanced.tracePoint);
+        const diagnosed = diagnoseConfirmedAutomatic(current, advanced.tracePoint, degraded);
+        if (!sameTracePoint(current, diagnosed)) {
+          await this.deps.repository.update(diagnosed);
         }
       }
       return created;

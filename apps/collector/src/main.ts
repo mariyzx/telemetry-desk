@@ -92,7 +92,7 @@ const stop = runCollector({
   persistenceFlush: () => samplePipeline.flush(),
   createManualTracePoint: async () =>
     createManualTracePointResponseSchema.parse(
-      toTracePointSummary(await createManualTracePointService.execute()),
+      toTracePointSummary(await createManualTracePointService.execute(ringBuffer.toArray())),
     ),
   listTracePoints: async (limit) =>
     listTracePointsResponseSchema.shape.data.parse({

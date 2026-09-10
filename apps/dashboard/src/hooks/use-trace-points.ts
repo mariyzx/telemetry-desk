@@ -22,7 +22,9 @@ function sameItems(
       other !== undefined &&
       item.id === other.id &&
       item.state === other.state &&
-      item.triggeredAtEpochMs === other.triggeredAtEpochMs
+      item.triggeredAtEpochMs === other.triggeredAtEpochMs &&
+      item.cause === other.cause &&
+      item.confidence === other.confidence
     );
   });
 }

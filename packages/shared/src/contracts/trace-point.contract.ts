@@ -9,6 +9,14 @@ export const tracePointStateSchema = z.enum([
   'finalized',
 ]);
 export const tracePointTriggerKindSchema = z.enum(['manual', 'drop', 'loss', 'latency', 'jitter']);
+export const probableCauseSchema = z.enum([
+  'local_network',
+  'isp_or_external_route',
+  'game_route_or_server',
+  'local_system_bottleneck',
+  'dns_resolution',
+  'inconclusive',
+]);
 
 export const tracePointSummarySchema = z
   .object({
@@ -19,6 +27,8 @@ export const tracePointSummarySchema = z
     triggeredAtEpochMs: z.number().int().nonnegative(),
     startedAtEpochMs: z.number().int().nonnegative(),
     endedAtEpochMs: z.number().int().nonnegative().nullable(),
+    cause: probableCauseSchema.nullable(),
+    confidence: z.number().min(0).max(1).nullable(),
     explanationCode: z.string().min(1).nullable(),
     preWindowStartEpochMs: z.number().int(),
     postWindowEndEpochMs: z.number().int().nonnegative(),

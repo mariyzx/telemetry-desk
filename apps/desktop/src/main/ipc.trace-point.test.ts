@@ -11,7 +11,9 @@ it('validates TracePoint IPC create and list while preserving correlation id', a
     triggeredAtEpochMs: 1_700_000_300_000,
     startedAtEpochMs: 1_700_000_300_000,
     endedAtEpochMs: null,
-    explanationCode: 'manual_user_report',
+    cause: 'inconclusive' as const,
+    confidence: 0.2,
+    explanationCode: 'diag_inconclusive_insufficient_evidence',
     preWindowStartEpochMs: 1_700_000_000_000,
     postWindowEndEpochMs: 1_700_000_600_000,
   };

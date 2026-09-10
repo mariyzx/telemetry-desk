@@ -34,6 +34,7 @@ export {
   createManualTracePointResponseSchema,
   listTracePointsRequestSchema,
   listTracePointsResponseSchema,
+  probableCauseSchema,
   tracePointOriginSchema,
   tracePointStateSchema,
   tracePointSummarySchema,
