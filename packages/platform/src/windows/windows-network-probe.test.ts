@@ -59,6 +59,29 @@ Ping statistics for 192.168.1.1:
     });
   });
 
+  it('maps Portuguese ping timeout and 100% perda to timeout quality', async () => {
+    const probe = new WindowsNetworkProbe({
+      runCommand: async () => ({
+        exitCode: 1,
+        stdout: `
+Disparando 1.1.1.1 com 32 bytes de dados:
+Esgotado o tempo limite do pedido.
+
+Estatisticas do Ping para 1.1.1.1:
+    Pacotes: Enviados = 1, Recebidos = 0, Perdidos = 1 (100% de
+             perda),
+`,
+        stderr: '',
+      }),
+      rawProbe: async () => ({ latencyMs: null, quality: 'unsupported' }),
+    });
+
+    await expect(probe.probe('1.1.1.1')).resolves.toEqual({
+      latencyMs: null,
+      quality: 'timeout',
+    });
+  });
+
   it('returns raw probe result when raw ICMP succeeds', async () => {
     const runCommand = vi.fn();
     const probe = new WindowsNetworkProbe({

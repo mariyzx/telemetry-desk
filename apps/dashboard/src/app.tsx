@@ -11,12 +11,7 @@ type RuntimeState =
   | { kind: 'error' };
 
 type ProbeQuality =
-  | 'ok'
-  | 'timeout'
-  | 'permission_denied'
-  | 'unsupported'
-  | 'unavailable'
-  | 'reachable';
+  'ok' | 'timeout' | 'permission_denied' | 'unsupported' | 'unavailable' | 'reachable';
 type TracePointOrigin = 'manual' | 'automatic';
 type TracePointState = 'candidate' | 'observing' | 'confirmed' | 'recovering' | 'finalized';
 

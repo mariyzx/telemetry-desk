@@ -20,7 +20,8 @@ export const unsupportedRawIcmpProbe: RawIcmpProbe = () =>
   });
 
 const LATENCY_PATTERN = /(?:time|tempo)\s*(?:[=<]\s*|<)(\d+)\s*ms/i;
-const TIMEOUT_PATTERN = /timed?\s*out|esgotado o tempo|tempo limite|100% (?:loss|perdidos)/i;
+const TIMEOUT_PATTERN =
+  /timed?\s*out|esgotado o tempo|tempo limite|100%\s*(?:de\s+)?(?:loss|perdidos|perda)/i;
 
 export interface WindowsNetworkProbeOptions {
   runCommand?: CommandRunner;

@@ -10,3 +10,8 @@ it('keeps non-Windows platforms unsupported without fake ICMP success', async ()
   });
   expect(ports.tcpReachability).toBeNull();
 });
+
+it('wires TCP reachability on Windows for internet ICMP-timeout fallback', () => {
+  const ports = createNetworkPorts('win32');
+  expect(ports.tcpReachability).not.toBeNull();
+});

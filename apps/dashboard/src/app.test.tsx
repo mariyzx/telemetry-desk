@@ -112,7 +112,9 @@ it('shows TCP reachability when ICMP is blocked but host answers on 443', async 
   render(<App />);
   await flushEffects();
 
-  expect(screen.getByText('Primário (1.1.1.1): — · Alcançável (ICMP bloqueado)')).toBeInTheDocument();
+  expect(
+    screen.getByText('Primário (1.1.1.1): — · Alcançável (ICMP bloqueado)'),
+  ).toBeInTheDocument();
   expect(
     screen.getByText('Secundário (8.8.8.8): — · Alcançável (ICMP bloqueado)'),
   ).toBeInTheDocument();
