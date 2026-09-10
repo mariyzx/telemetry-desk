@@ -8,31 +8,65 @@ type RuntimeState =
   | { kind: 'success'; data: RuntimeStatusResponse['data'] }
   | { kind: 'error' };
 
+type GatewayQuality = 'ok' | 'timeout' | 'permission_denied' | 'unsupported' | 'unavailable';
+type TracePointOrigin = 'manual' | 'automatic';
+type TracePointState = 'candidate' | 'observing' | 'confirmed' | 'recovering' | 'finalized';
+
 function countEnabledCapabilities(
   capabilities: RuntimeStatusResponse['data']['capabilities'],
 ): number {
   return Object.values(capabilities).filter(Boolean).length;
 }
 
-function formatGatewayQuality(
-  quality: 'ok' | 'timeout' | 'permission_denied' | 'unsupported' | 'unavailable',
-): string {
+function formatGatewayQuality(quality: GatewayQuality): string {
   switch (quality) {
     case 'ok':
-      return 'ok';
+      return 'Bom';
     case 'timeout':
-      return 'timeout';
+      return 'Tempo esgotado';
     case 'permission_denied':
-      return 'permission_denied';
+      return 'Sem permissão';
     case 'unsupported':
-      return 'unsupported';
+      return 'Não suportado';
     case 'unavailable':
-      return 'unavailable';
+      return 'Indisponível';
+  }
+}
+
+function formatTracePointOrigin(origin: TracePointOrigin): string {
+  switch (origin) {
+    case 'manual':
+      return 'Manual';
+    case 'automatic':
+      return 'Automático';
+  }
+}
+
+function formatTracePointState(state: TracePointState): string {
+  switch (state) {
+    case 'candidate':
+      return 'Candidato';
+    case 'observing':
+      return 'Em observação';
+    case 'confirmed':
+      return 'Confirmado';
+    case 'recovering':
+      return 'Em recuperação';
+    case 'finalized':
+      return 'Finalizado';
   }
 }
 
 function formatTriggeredAt(epochMs: number): string {
-  return new Date(epochMs).toLocaleString();
+  return new Date(epochMs).toLocaleString('pt-BR');
+}
+
+function formatTracePointSummary(item: {
+  origin: TracePointOrigin;
+  state: TracePointState;
+  triggeredAtEpochMs: number;
+}): string {
+  return `${formatTracePointOrigin(item.origin)} · ${formatTracePointState(item.state)} · ${formatTriggeredAt(item.triggeredAtEpochMs)}`;
 }
 
 export function App() {
@@ -89,7 +123,10 @@ export function App() {
   return (
     <main>
       <h1>TelemetryDesk pronto</h1>
-      <p>{enabled} de 6 capacidades disponíveis</p>
+      <section aria-labelledby="runtime-heading">
+        <h2 id="runtime-heading">Sistema</h2>
+        <p>{enabled} de 6 capacidades disponíveis</p>
+      </section>
       <section aria-labelledby="gateway-heading">
         <h2 id="gateway-heading">Gateway</h2>
         <p>Host: {gateway.data.gatewayHost ?? 'indisponível'}</p>
@@ -103,10 +140,7 @@ export function App() {
         ) : (
           <ul>
             {tracePoints.items.map((item) => (
-              <li key={item.id}>
-                <strong>{item.origin}</strong> · {item.state} ·{' '}
-                {formatTriggeredAt(item.triggeredAtEpochMs)}
-              </li>
+              <li key={item.id}>{formatTracePointSummary(item)}</li>
             ))}
           </ul>
         )}

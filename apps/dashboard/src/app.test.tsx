@@ -65,11 +65,12 @@ it('shows ready status, capability count and gateway probe', async () => {
   await flushEffects();
 
   expect(screen.getByRole('heading', { name: 'TelemetryDesk pronto' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Sistema' })).toBeInTheDocument();
   expect(screen.getByText('1 de 6 capacidades disponíveis')).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Gateway' })).toBeInTheDocument();
   expect(screen.getByText('Host: 192.168.1.1')).toBeInTheDocument();
   expect(screen.getByText('Latência: 12 ms')).toBeInTheDocument();
-  expect(screen.getByText('Qualidade: ok')).toBeInTheDocument();
+  expect(screen.getByText('Qualidade: Bom')).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'TracePoints recentes' })).toBeInTheDocument();
   expect(
     screen.getByText('Nenhum TracePoint ainda. Use "Travou agora" no tray.'),
@@ -114,8 +115,9 @@ it('shows a recent manual TracePoint in the list', async () => {
   render(<App />);
   await flushEffects();
 
-  expect(screen.getByText('manual')).toBeInTheDocument();
-  expect(screen.getByText(/confirmed/)).toBeInTheDocument();
+  expect(screen.getByText(/Manual · Confirmado ·/)).toBeInTheDocument();
+  expect(screen.queryByText('manual')).not.toBeInTheDocument();
+  expect(screen.queryByText(/confirmed/)).not.toBeInTheDocument();
 });
 
 it('shows gateway typed error without leaking internals', async () => {
@@ -142,7 +144,7 @@ it('shows gateway typed error without leaking internals', async () => {
   await flushEffects();
 
   expect(screen.getByText('Latência: —')).toBeInTheDocument();
-  expect(screen.getByText('Qualidade: timeout')).toBeInTheDocument();
+  expect(screen.getByText('Qualidade: Tempo esgotado')).toBeInTheDocument();
 });
 
 it('shows an error without leaking details', async () => {
