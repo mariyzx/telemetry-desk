@@ -146,30 +146,39 @@ button { cursor: pointer; }
 .button-secondary:hover { background: rgb(255 77 56 / 20%); }
 
 /* —— TracePoints / Técnico (legado Task 1; refinado em Task 3) —— */
-.chip, .badge { display: inline-block; padding: var(--space-1) 7px; border-radius: var(--radius-sm); background: rgb(255 77 56 / 12%); color: #ff7665; font-size: 8px; font-weight: 700; letter-spacing: .04em; }
-.filters, .filter-bar { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: 14px; }
+.chip, .badge { display: inline-flex; align-items: center; justify-content: center; width: fit-content; padding: var(--space-1) 7px; border: 1px solid rgb(255 77 56 / 28%); border-radius: var(--radius-sm); background: rgb(255 77 56 / 12%); color: #ff7665; font-size: 9px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.filters, .filter-bar { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-4); }
 .filter, .filter-button { border-color: var(--color-border); background: var(--color-surface); color: var(--color-muted); font-weight: 600; }
 .filter:hover, .filter-button:hover { border-color: var(--color-border-strong); background: var(--color-surface-raised); color: var(--color-text); }
 .filter.on, .filter-button[aria-pressed="true"] { border-color: var(--color-danger); background: rgb(255 77 56 / 12%); color: var(--color-text); }
 .events, .event-list { display: grid; gap: var(--space-2); }
-.event, .event-row { display: grid; grid-template-columns: 100px 90px 1fr minmax(110px, auto); align-items: center; gap: var(--space-3); padding: 15px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
+.event, .event-row {
+  display: grid;
+  grid-template-columns: 100px 110px minmax(0, 1fr) minmax(130px, auto);
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
 .event:hover, .event-row:hover { border-color: var(--color-border-strong); }
-.event time, .event-row time { font: 10px var(--font-mono); color: var(--color-muted); }
-.event p, .event-row p { margin: 0; color: var(--color-muted); }
+.event time, .event-row time { font: 11px var(--font-mono); color: var(--color-muted); }
+.event p, .event-row p { margin: 0; color: var(--color-muted); min-width: 0; }
 .event-row__title { color: var(--color-text); font-weight: 700; }
 .sev { color: var(--color-warning); }
 .ok { color: var(--color-success); }
-.event-row__action { justify-self: end; text-align: right; font-size: 11px; }
-.metrics, .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); margin-bottom: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); overflow: hidden; }
-.metric, .metric-card { padding: var(--space-4); border-right: 1px solid var(--color-border); }
+.event-row__action { justify-self: end; text-align: right; font-size: 11px; white-space: nowrap; }
+.event-row__action--muted { color: var(--color-muted); }
+.metrics, .metrics-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); overflow: hidden; }
+.metric, .metric-card { padding: var(--space-4); border-right: 1px solid var(--color-border); min-width: 0; }
 .metric:last-child, .metric-card:last-child { border-right: 0; }
-.metric small, .metric-card small { color: var(--color-muted); }
+.metric small, .metric-card small { color: var(--color-muted); font-size: 11px; }
 .metric b, .metric-card b { display: block; margin-top: var(--space-2); font: 700 23px/1.1 var(--font-mono); }
 .charts, .technical-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
 .panel { padding: var(--space-4); }
 .panel h2, .preview h2 { margin: 0 0 14px; font-size: 12px; font-weight: 600; }
-.chart { height: 230px; position: relative; background: repeating-linear-gradient(0deg, transparent 0 45px, var(--color-border) 45px 46px); border-radius: var(--radius-sm); }
-.chart svg { position: absolute; inset: 20px 0; width: 100%; height: 160px; }
+.technical-grid > .chart-card { min-height: 260px; }
 
 /* —— Config / Export (legado; refinado em Task 4) —— */
 .settings, .settings-layout { display: grid; grid-template-columns: 180px 1fr; min-height: 500px; }
@@ -209,9 +218,16 @@ button { cursor: pointer; }
   .main, .main-content { padding: var(--space-4); }
   .diagnostic-path { overflow-x: auto; justify-content: flex-start; }
   .path-connector { min-width: 32px; flex: 0 0 40px; }
-  .event, .event-row { grid-template-columns: 80px 1fr; }
-  .event > *:nth-child(2), .event > *:nth-child(4),
-  .event-row > *:nth-child(2), .event-row > *:nth-child(4) { display: none; }
+  .event, .event-row {
+    grid-template-columns: 90px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "time content action"
+      "badge content action";
+  }
+  .event time, .event-row time { grid-area: time; }
+  .event .badge, .event-row .badge { grid-area: badge; align-self: start; }
+  .event p, .event-row p { grid-area: content; }
+  .event-row__action, .event .sev { grid-area: action; align-self: start; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -356,10 +372,30 @@ button { cursor: pointer; }
         <button type="button" class="filter filter-button" aria-pressed="false">Últimos 7 dias</button>
       </div>
       <div class="events event-list">
-        <article class="event event-row"><time>Hoje 14:18</time><span class="chip badge">AUTOMÁTICO</span><p><span class="event-row__title">Instabilidade no Wi‑Fi</span><br>Jitter elevado por 34 segundos; gateway afetado.</p><span class="sev event-row__action">Severidade: Moderado</span></article>
-        <article class="event event-row"><time>Hoje 11:42</time><span class="chip badge">MANUAL</span><p><span class="event-row__title">Travada marcada</span><br>Rede estável; CPU em 96% durante o evento.</p><span class="event-row__action">Ver detalhe</span></article>
-        <article class="event event-row"><time>Ontem 22:07</time><span class="chip badge">AUTOMÁTICO</span><p><span class="event-row__title">Perda na rota externa</span><br>Gateway normal; dois destinos públicos degradados.</p><span class="sev event-row__action">Severidade: Alto</span></article>
-        <article class="event event-row"><time>Ontem 18:31</time><span class="chip badge">AUTOMÁTICO</span><p><span class="event-row__title">Pico breve sem impacto</span><br>42 ms por 2 segundos; evento não confirmado.</p><span class="event-row__action">Severidade: Baixo</span></article>
+        <article class="event event-row">
+          <time datetime="2026-09-10T14:18">Hoje 14:18</time>
+          <span class="chip badge">Automático</span>
+          <p><span class="event-row__title">Instabilidade no Wi‑Fi</span><br>Jitter elevado por 34 segundos; gateway afetado.</p>
+          <span class="sev event-row__action">Severidade: Moderado</span>
+        </article>
+        <article class="event event-row">
+          <time datetime="2026-09-10T11:42">Hoje 11:42</time>
+          <span class="chip badge">Manual</span>
+          <p><span class="event-row__title">Travada marcada</span><br>Rede estável; CPU em 96% durante o evento.</p>
+          <span class="event-row__action event-row__action--muted">Ver detalhe</span>
+        </article>
+        <article class="event event-row">
+          <time datetime="2026-09-09T22:07">Ontem 22:07</time>
+          <span class="chip badge">Automático</span>
+          <p><span class="event-row__title">Perda na rota externa</span><br>Gateway normal; dois destinos públicos degradados.</p>
+          <span class="sev event-row__action">Severidade: Alto</span>
+        </article>
+        <article class="event event-row">
+          <time datetime="2026-09-09T18:31">Ontem 18:31</time>
+          <span class="chip badge">Automático</span>
+          <p><span class="event-row__title">Pico breve sem impacto</span><br>42 ms por 2 segundos; evento não confirmado.</p>
+          <span class="event-row__action">Severidade: Baixo</span>
+        </article>
       </div>
     </section>
 
