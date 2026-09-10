@@ -10,7 +10,13 @@ type RuntimeState =
   | { kind: 'success'; data: RuntimeStatusResponse['data'] }
   | { kind: 'error' };
 
-type ProbeQuality = 'ok' | 'timeout' | 'permission_denied' | 'unsupported' | 'unavailable';
+type ProbeQuality =
+  | 'ok'
+  | 'timeout'
+  | 'permission_denied'
+  | 'unsupported'
+  | 'unavailable'
+  | 'reachable';
 type TracePointOrigin = 'manual' | 'automatic';
 type TracePointState = 'candidate' | 'observing' | 'confirmed' | 'recovering' | 'finalized';
 
@@ -24,8 +30,10 @@ function formatProbeQuality(quality: ProbeQuality): string {
   switch (quality) {
     case 'ok':
       return 'Bom';
+    case 'reachable':
+      return 'Alcançável (ICMP bloqueado)';
     case 'timeout':
-      return 'Tempo esgotado';
+      return 'Sem resposta ICMP';
     case 'permission_denied':
       return 'Sem permissão';
     case 'unsupported':
@@ -159,6 +167,10 @@ export function App() {
           Secundário ({internet.data.secondary.host}):{' '}
           {formatLatency(internet.data.secondary.latencyMs)} ·{' '}
           {formatProbeQuality(internet.data.secondary.quality)}
+        </p>
+        <p>
+          Latência ICMP quando disponível; se o firewall bloquear ping, o app confirma
+          alcançabilidade via TCP/443 sem inventar RTT.
         </p>
       </section>
       <section aria-labelledby="trace-points-heading">

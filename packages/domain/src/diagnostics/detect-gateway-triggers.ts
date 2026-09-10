@@ -29,6 +29,12 @@ export const JITTER_THRESHOLD_MS = 30;
 export const BASELINE_WINDOW_MS = 15 * 60 * 1000;
 export const BASELINE_MIN_SAMPLES = 60;
 
+/** Connectivity confirmed (ICMP reply or non-ICMP reachability with received>0). */
+function hasConnectivity(sample: DetectorSample): boolean {
+  return sample.received > 0;
+}
+
+/** ICMP-style answer with a usable RTT for latency/jitter. */
 function isAnswered(sample: DetectorSample): boolean {
   return sample.received > 0 && sample.latencyMs !== null;
 }
@@ -81,7 +87,7 @@ function detectDrop(samples: readonly DetectorSample[]): DetectedTrigger | null 
     return null;
   }
   const recent = samples.slice(-DROP_CONSECUTIVE_FAILURES);
-  if (recent.every((s) => !isAnswered(s))) {
+  if (recent.every((s) => !hasConnectivity(s))) {
     return {
       kind: 'drop',
       observedValue: DROP_CONSECUTIVE_FAILURES,

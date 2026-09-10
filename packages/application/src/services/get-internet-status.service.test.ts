@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
-import type { NetworkProbePort } from '../ports/telemetry-ports.js';
+import { describe, expect, it, vi } from 'vitest';
+import type { NetworkProbePort, TcpReachabilityPort } from '../ports/telemetry-ports.js';
 import {
   DEFAULT_INTERNET_PRIMARY_HOST,
   DEFAULT_INTERNET_SECONDARY_HOST,
+  DEFAULT_INTERNET_TCP_FALLBACK_PORT,
   GetInternetStatusService,
 } from './get-internet-status.service.js';
 
@@ -42,5 +43,58 @@ describe('GetInternetStatusService', () => {
     });
     expect(DEFAULT_INTERNET_PRIMARY_HOST).toBe('1.1.1.1');
     expect(DEFAULT_INTERNET_SECONDARY_HOST).toBe('8.8.8.8');
+  });
+
+  it('falls back to TCP reachability without inventing ICMP latency', async () => {
+    const networkProbe: NetworkProbePort = {
+      probe: async () => ({ latencyMs: null, quality: 'timeout' }),
+    };
+    const tcpReachability: TcpReachabilityPort = {
+      isReachable: vi.fn().mockResolvedValue(true),
+    };
+
+    const service = new GetInternetStatusService(clock, networkProbe, undefined, tcpReachability);
+
+    await expect(service.probeHost(DEFAULT_INTERNET_PRIMARY_HOST)).resolves.toEqual({
+      host: DEFAULT_INTERNET_PRIMARY_HOST,
+      latencyMs: null,
+      quality: 'reachable',
+      observedAtEpochMs: 1_700_000_000_000,
+      monotonicMs: 42,
+    });
+    expect(tcpReachability.isReachable).toHaveBeenCalledWith(
+      DEFAULT_INTERNET_PRIMARY_HOST,
+      DEFAULT_INTERNET_TCP_FALLBACK_PORT,
+    );
+  });
+
+  it('keeps ICMP timeout when TCP fallback also fails', async () => {
+    const service = new GetInternetStatusService(
+      clock,
+      { probe: async () => ({ latencyMs: null, quality: 'timeout' }) },
+      undefined,
+      { isReachable: async () => false },
+    );
+
+    await expect(service.probeHost('8.8.8.8')).resolves.toMatchObject({
+      host: '8.8.8.8',
+      latencyMs: null,
+      quality: 'timeout',
+    });
+  });
+
+  it('does not attempt TCP when ICMP succeeds', async () => {
+    const tcpReachability: TcpReachabilityPort = {
+      isReachable: vi.fn(),
+    };
+    const service = new GetInternetStatusService(
+      clock,
+      { probe: async () => ({ latencyMs: 12, quality: 'ok' }) },
+      undefined,
+      tcpReachability,
+    );
+
+    await service.probeHost(DEFAULT_INTERNET_PRIMARY_HOST);
+    expect(tcpReachability.isReachable).not.toHaveBeenCalled();
   });
 });

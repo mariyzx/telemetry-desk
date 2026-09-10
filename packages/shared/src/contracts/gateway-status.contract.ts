@@ -6,6 +6,7 @@ export const probeQualitySchema = z.enum([
   'permission_denied',
   'timeout',
   'unavailable',
+  'reachable',
 ]);
 
 export const gatewayStatusDataSchema = z

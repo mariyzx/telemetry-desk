@@ -36,7 +36,8 @@ export class WindowsNetworkProbe implements NetworkProbePort {
   constructor(options: WindowsNetworkProbeOptions = {}) {
     this.commandRunner = options.runCommand ?? runCommand;
     this.rawProbe = options.rawProbe ?? unsupportedRawIcmpProbe;
-    this.timeoutMs = options.timeoutMs ?? 1000;
+    /** Reasonable wait for one echo; blocked ICMP still fails fast enough for TCP fallback. */
+    this.timeoutMs = options.timeoutMs ?? 2000;
   }
 
   async probe(host: string): Promise<ProbeResult> {

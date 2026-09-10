@@ -1,4 +1,11 @@
-export type ProbeQuality = 'ok' | 'unsupported' | 'permission_denied' | 'timeout' | 'unavailable';
+export type ProbeQuality =
+  | 'ok'
+  | 'unsupported'
+  | 'permission_denied'
+  | 'timeout'
+  | 'unavailable'
+  /** Host answered on a non-ICMP path (e.g. TCP/443); latencyMs must stay null. */
+  | 'reachable';
 
 export interface Clock {
   nowEpochMs(): number;
@@ -7,6 +14,14 @@ export interface Clock {
 
 export interface NetworkProbePort {
   probe(host: string): Promise<{ latencyMs: number | null; quality: ProbeQuality }>;
+}
+
+/**
+ * Lightweight reachability check used when ICMP times out.
+ * Must not invent ICMP latency — only boolean connectivity.
+ */
+export interface TcpReachabilityPort {
+  isReachable(host: string, port?: number): Promise<boolean>;
 }
 
 export interface GatewayResolverPort {

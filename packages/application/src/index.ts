@@ -13,6 +13,7 @@ export type {
   PowerStatePort,
   ProbeQuality,
   SystemMetricsPort,
+  TcpReachabilityPort,
   WifiMetricsPort,
 } from './ports/telemetry-ports.js';
 export type { TracePointRepository } from './ports/trace-point-repository.js';

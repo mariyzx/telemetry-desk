@@ -30,6 +30,32 @@ it('accepts dual public internet status', () => {
   ).toBe(true);
 });
 
+it('accepts TCP reachability without ICMP latency', () => {
+  expect(
+    internetStatusResponseSchema.safeParse({
+      correlationId: '8bbf73d6-57ca-4fdd-9ce7-57bcd2404520',
+      data: {
+        primary: {
+          host: '1.1.1.1',
+          latencyMs: null,
+          quality: 'reachable',
+          observedAtEpochMs: 1_700_000_000_000,
+          monotonicMs: 42,
+        },
+        secondary: {
+          host: '8.8.8.8',
+          latencyMs: null,
+          quality: 'reachable',
+          observedAtEpochMs: 1_700_000_001_000,
+          monotonicMs: 1_042,
+        },
+        observedAtEpochMs: 1_700_000_001_000,
+        monotonicMs: 1_042,
+      },
+    }).success,
+  ).toBe(true);
+});
+
 it('rejects invalid internet status payloads', () => {
   expect(internetStatusRequestSchema.safeParse({ correlationId: 'not-a-uuid' }).success).toBe(
     false,

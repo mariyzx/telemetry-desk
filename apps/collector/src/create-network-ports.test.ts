@@ -8,4 +8,5 @@ it('keeps non-Windows platforms unsupported without fake ICMP success', async ()
     latencyMs: null,
     quality: 'unsupported',
   });
+  expect(ports.tcpReachability).toBeNull();
 });

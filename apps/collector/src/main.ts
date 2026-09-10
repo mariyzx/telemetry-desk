@@ -37,7 +37,12 @@ const gatewayProbe = new GetGatewayStatusService(
   networkPorts.networkProbe,
 );
 const gatewayStatusService = new CachedGetGatewayStatusService(gatewayProbe);
-const internetProbe = new GetInternetStatusService(clock, networkPorts.networkProbe);
+const internetProbe = new GetInternetStatusService(
+  clock,
+  networkPorts.networkProbe,
+  undefined,
+  networkPorts.tcpReachability,
+);
 const internetStatusService = new CachedGetInternetStatusService(internetProbe);
 
 const dbPath = resolveDatabasePath();

@@ -24,7 +24,7 @@ Ping statistics for 192.168.1.1:
       latencyMs: 14,
       quality: 'ok',
     });
-    expect(runCommand).toHaveBeenCalledWith('ping', ['-n', '1', '-w', '1000', '192.168.1.1']);
+    expect(runCommand).toHaveBeenCalledWith('ping', ['-n', '1', '-w', '2000', '192.168.1.1']);
   });
 
   it('parses Portuguese tempo= output', async () => {

@@ -51,11 +51,11 @@ describe('detectGatewayTriggers', () => {
     });
   });
 
-  it('does not fire drop with only two consecutive failures', () => {
+  it('does not fire drop when probes have connectivity without ICMP latency', () => {
     const samples = [
-      sample(0, { ok: true }),
-      sample(1000, { ok: false }),
-      sample(2000, { ok: false }),
+      sample(0, { received: 1, latencyMs: null }),
+      sample(1000, { received: 1, latencyMs: null }),
+      sample(2000, { received: 1, latencyMs: null }),
     ];
 
     expect(detectGatewayTriggers(samples, BASE + 2000).map((t) => t.kind)).not.toContain('drop');

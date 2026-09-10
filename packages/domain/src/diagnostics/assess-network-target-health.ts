@@ -5,8 +5,9 @@ import {
   type DetectorSample,
 } from './detect-gateway-triggers.js';
 
-function isAnswered(sample: DetectorSample): boolean {
-  return sample.received > 0 && sample.latencyMs !== null;
+/** Connectivity (ICMP or TCP reachability sample with received>0), not necessarily RTT. */
+function hasConnectivity(sample: DetectorSample): boolean {
+  return sample.received > 0;
 }
 
 /**
@@ -30,7 +31,7 @@ export function assessNetworkTargetHealth(
     (sample) => sample.observedAtEpochMs >= windowStart && sample.observedAtEpochMs <= nowEpochMs,
   );
 
-  if (recent.some(isAnswered)) {
+  if (recent.some(hasConnectivity)) {
     return 'good';
   }
 

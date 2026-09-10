@@ -51,4 +51,32 @@ describe('toInternetNetworkSample', () => {
       errorCode: 'timeout',
     });
   });
+
+  it('records TCP reachability without inventing ICMP latency', () => {
+    expect(
+      toInternetNetworkSample(
+        {
+          host: '1.1.1.1',
+          latencyMs: null,
+          quality: 'reachable',
+          observedAtEpochMs: 1_700_000_000_200,
+          monotonicMs: 242,
+        },
+        'sample-3',
+      ),
+    ).toEqual({
+      id: 'sample-3',
+      observedAtEpochMs: 1_700_000_000_200,
+      targetRole: 'internet',
+      targetHost: '1.1.1.1',
+      interfaceId: null,
+      latencyMs: null,
+      jitterMs: null,
+      sent: 1,
+      received: 1,
+      lossRatio: 0,
+      quality: 'reachable',
+      errorCode: null,
+    });
+  });
 });

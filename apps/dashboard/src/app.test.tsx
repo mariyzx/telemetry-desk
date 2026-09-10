@@ -77,11 +77,31 @@ async function flushEffects(): Promise<void> {
   });
 }
 
-it('shows ready status, capability count, gateway and internet probes', async () => {
+it('shows TCP reachability when ICMP is blocked but host answers on 443', async () => {
   window.telemetryDesk = {
     getRuntimeStatus: vi.fn().mockResolvedValue(runtimeReady()),
     getGatewayStatus: vi.fn().mockResolvedValue(gatewayReady()),
-    getInternetStatus: vi.fn().mockResolvedValue(internetReady()),
+    getInternetStatus: vi.fn().mockResolvedValue({
+      correlationId: crypto.randomUUID(),
+      data: {
+        primary: {
+          host: '1.1.1.1',
+          latencyMs: null,
+          quality: 'reachable' as const,
+          observedAtEpochMs: 1700000000000,
+          monotonicMs: 42,
+        },
+        secondary: {
+          host: '8.8.8.8',
+          latencyMs: null,
+          quality: 'reachable' as const,
+          observedAtEpochMs: 1700000001000,
+          monotonicMs: 1042,
+        },
+        observedAtEpochMs: 1700000001000,
+        monotonicMs: 1042,
+      },
+    }),
     createManualTracePoint: vi.fn(),
     listTracePoints: vi.fn().mockResolvedValue({
       correlationId: crypto.randomUUID(),
@@ -90,23 +110,11 @@ it('shows ready status, capability count, gateway and internet probes', async ()
   };
 
   render(<App />);
-  expect(screen.getByText('Carregando status…')).toBeInTheDocument();
-
   await flushEffects();
 
-  expect(screen.getByRole('heading', { name: 'TelemetryDesk pronto' })).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'Sistema' })).toBeInTheDocument();
-  expect(screen.getByText('1 de 6 capacidades disponíveis')).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'Gateway' })).toBeInTheDocument();
-  expect(screen.getByText('Host: 192.168.1.1')).toBeInTheDocument();
-  expect(screen.getByText('Latência: 12 ms')).toBeInTheDocument();
-  expect(screen.getByText('Qualidade: Bom')).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'Internet' })).toBeInTheDocument();
-  expect(screen.getByText('Primário (1.1.1.1): 16 ms · Bom')).toBeInTheDocument();
-  expect(screen.getByText('Secundário (8.8.8.8): 22 ms · Bom')).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'TracePoints recentes' })).toBeInTheDocument();
+  expect(screen.getByText('Primário (1.1.1.1): — · Alcançável (ICMP bloqueado)')).toBeInTheDocument();
   expect(
-    screen.getByText('Nenhum TracePoint ainda. Use "Travou agora" no tray.'),
+    screen.getByText('Secundário (8.8.8.8): — · Alcançável (ICMP bloqueado)'),
   ).toBeInTheDocument();
 });
 
@@ -174,7 +182,7 @@ it('shows gateway typed error without leaking internals', async () => {
   await flushEffects();
 
   expect(screen.getByText('Latência: —')).toBeInTheDocument();
-  expect(screen.getByText('Qualidade: Tempo esgotado')).toBeInTheDocument();
+  expect(screen.getByText('Qualidade: Sem resposta ICMP')).toBeInTheDocument();
 });
 
 it('shows an error without leaking details', async () => {

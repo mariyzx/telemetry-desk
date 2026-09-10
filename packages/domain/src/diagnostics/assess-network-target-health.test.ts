@@ -32,8 +32,21 @@ describe('assessNetworkTargetHealth', () => {
     expect(assessNetworkTargetHealth(samples, NOW)).toBe('bad');
   });
 
-  it('returns good when recent probes answered and no trigger fired', () => {
-    const samples = [sample(-2000, true), sample(-1000, true), sample(0, true)];
+  it('returns good when recent probes have connectivity without ICMP latency', () => {
+    const samples = [
+      {
+        observedAtEpochMs: NOW - 1000,
+        latencyMs: null,
+        sent: 1,
+        received: 1,
+      },
+      {
+        observedAtEpochMs: NOW,
+        latencyMs: null,
+        sent: 1,
+        received: 1,
+      },
+    ];
     expect(assessNetworkTargetHealth(samples, NOW)).toBe('good');
   });
 
