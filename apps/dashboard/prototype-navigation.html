@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,"><title>TelemetryDesk — Protótipo</title>
+<style>
+:root {
+  --color-bg: #0b0c0f;
+  --color-surface: #111318;
+  --color-raised: #15181e;
+  --color-border: #282c33;
+  --color-border-strong: #3a3f48;
+  --color-text: #f3f4f6;
+  --color-muted: #969ba4;
+  --color-coral: #ff4d38;
+  --color-green: #46cc83;
+  --color-amber: #e8ae4a;
+  --font-sans: Geist, Inter, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; }
+body { margin: 0; background: var(--color-bg); color: var(--color-text); font: 12px/1.5 var(--font-sans); }
+button, input, select, textarea { font: inherit; }
+button, select, input { color: inherit; }
+button { cursor: pointer; }
+button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--color-coral); outline-offset: 2px; }
+
+.app, .app-shell { width: 100vw; height: 100vh; min-width: 0; overflow: hidden; display: grid; grid-template: 48px 1fr / 72px 1fr; background: var(--color-bg); }
+.top, .topbar { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--space-3); min-width: 0; padding: 0 var(--space-4); border-bottom: 1px solid var(--color-border); background: var(--color-surface); }
+.logo { width: 24px; height: 24px; flex: 0 0 auto; color: var(--color-coral); }
+.logo svg { display: block; width: 100%; height: 100%; }
+.brand { font-size: 13px; font-weight: 750; letter-spacing: -.01em; }
+.live { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--color-green); font: 700 9px var(--font-mono); letter-spacing: .08em; }
+.live::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 3px rgb(70 204 131 / 12%); }
+.updated { margin-left: auto; color: var(--color-muted); font: 9px var(--font-mono); white-space: nowrap; }
+.button, .danger, .primary, .filter { min-height: 32px; border: 1px solid transparent; border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); font-weight: 700; transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease; }
+.danger, .primary { background: var(--color-coral); color: var(--color-bg); }
+.danger:hover, .primary:hover { background: #ff6a58; }
+
+.side, .sidebar { min-height: 0; padding: var(--space-2); border-right: 1px solid var(--color-border); background: var(--color-surface); }
+.nav, .nav-item { width: 56px; height: 56px; display: grid; place-items: center; gap: 2px; border: 1px solid transparent; border-radius: var(--radius-md); background: transparent; color: var(--color-muted); font-size: 8px; line-height: 1; }
+.nav svg { width: 20px; height: 20px; }
+.nav:hover { background: var(--color-raised); color: var(--color-text); }
+.nav.active { border-color: var(--color-border); background: var(--color-raised); color: var(--color-coral); }
+.nav span { display: grid; justify-items: center; gap: 6px; }
+
+.main, .main-content { min-width: 0; min-height: 0; overflow: auto; padding: var(--space-6); }
+.screen { display: none; }
+.screen.active { display: block; }
+.title h1 { margin: 0 0 var(--space-1); font-size: 20px; line-height: 1.25; }
+.title p { margin: 0 0 var(--space-5); color: var(--color-muted); }
+.box, .card { border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
+.route { height: 210px; display: flex; align-items: center; justify-content: space-around; padding: var(--space-6); }
+.node { min-width: 100px; text-align: center; }
+.node i { width: 42px; height: 42px; display: grid; place-items: center; margin: auto; border: 1px solid var(--color-border); border-radius: 50%; color: var(--color-green); font-style: normal; font-size: 18px; }
+.node b { display: block; margin-top: 10px; }
+.node small { color: var(--color-muted); font: 9px var(--font-mono); }
+.connector { max-width: 110px; height: 1px; flex: 1; background: var(--color-border); }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: var(--space-5); margin-top: var(--space-5); }
+.panel { padding: var(--space-4); }
+.panel h2, .preview h2 { margin: 0 0 14px; font-size: 11px; }
+.chart { height: 230px; position: relative; background: repeating-linear-gradient(0deg, transparent, transparent 45px, var(--color-raised) 46px); }
+.chart svg { position: absolute; inset: 20px 0; width: 100%; height: 160px; }
+.note { color: var(--color-muted); line-height: 1.6; }
+.note strong { color: var(--color-text); }
+.chip, .badge { display: inline-block; padding: var(--space-1) 7px; border-radius: var(--radius-sm); background: rgb(255 77 56 / 12%); color: #ff7665; font-size: 8px; }
+.filters { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: 14px; }
+.filter { border-color: var(--color-border); background: var(--color-surface); color: var(--color-muted); }
+.filter:hover, .filter.on { border-color: var(--color-border-strong); background: var(--color-raised); color: var(--color-text); }
+.events { display: grid; gap: var(--space-2); }
+.event { display: grid; grid-template-columns: 100px 90px 1fr 100px; align-items: center; padding: 15px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
+.event:hover { border-color: var(--color-border-strong); }
+.event time { font: 10px var(--font-mono); }
+.event p { margin: 0; color: var(--color-muted); }
+.sev { color: var(--color-amber); }
+.ok { color: var(--color-green); }
+.metrics { display: grid; grid-template-columns: repeat(4, 1fr); margin-bottom: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
+.metric { padding: var(--space-4); border-right: 1px solid var(--color-border); }
+.metric:last-child { border: 0; }
+.metric small { color: var(--color-muted); }
+.metric b { display: block; margin-top: var(--space-2); font: 700 23px var(--font-mono); }
+.charts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.settings { display: grid; grid-template-columns: 180px 1fr; min-height: 500px; }
+.settings-menu { padding: var(--space-3); border-right: 1px solid var(--color-border); }
+.settings-menu div { padding: 10px; color: var(--color-muted); }
+.settings-menu .on { border-radius: var(--radius-sm); background: var(--color-raised); color: var(--color-text); }
+.form { max-width: 720px; padding: 22px; }
+.group { padding: 17px 0; border-bottom: 1px solid var(--color-border); }
+.group h3 { margin: 0 0 5px; font-size: 12px; }
+.group p { margin: 0 0 var(--space-3); color: var(--color-muted); }
+.field { display: grid; grid-template-columns: 1fr 180px; align-items: center; margin: 10px 0; }
+.field input, .field select { padding: 9px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); background: var(--color-bg); }
+.toggle { width: 34px; height: 18px; position: relative; justify-self: end; border-radius: 20px; background: var(--color-green); }
+.toggle::after { content: ""; width: 14px; height: 14px; position: absolute; top: 2px; right: 2px; border-radius: 50%; background: white; }
+.export { display: grid; grid-template-columns: 1fr 360px; gap: var(--space-5); }
+.checks label { display: block; padding: var(--space-3); border-bottom: 1px solid var(--color-border); }
+.preview { padding: var(--space-4); }
+.preview code { display: block; color: var(--color-muted); font: 9px/1.7 var(--font-mono); white-space: pre-wrap; }
+.primary { margin-top: var(--space-4); }
+
+@media (max-width: 850px) {
+  .updated { display: none; }
+  .main { padding: var(--space-4); }
+  .grid, .export, .charts { grid-template-columns: 1fr; }
+  .route { overflow: auto; justify-content: flex-start; }
+  .connector { min-width: 50px; }
+  .settings { grid-template-columns: 1fr; }
+  .settings-menu { display: none; }
+  .metrics { grid-template-columns: 1fr 1fr; }
+  .event { grid-template-columns: 80px 1fr; }
+  .event > *:nth-child(2), .event > *:nth-child(4) { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }
+</style></head><body>
+<svg aria-hidden="true" focusable="false" width="0" height="0" style="position:absolute"><symbol id="icon-home" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol><symbol id="icon-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol><symbol id="icon-terminal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m7 9 3 3-3 3m5 0h5" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol><symbol id="icon-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol><symbol id="icon-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="2" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="6" cy="12" r="2" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="18" cy="19" r="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m8 11 8-5m-8 7 8 5" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol><symbol id="logo-mark" viewBox="0 0 24 24"><path d="M4 12h4l2-6 4 12 2-6h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol></svg>
+<div class="app app-shell"><header class="top topbar"><span class="logo"><svg aria-hidden="true" focusable="false"><use href="#logo-mark"/></svg></span><span class="brand">TelemetryDesk</span><span class="live">MONITORANDO</span><span class="updated">Última atualização: 14:32:05.102</span><button class="danger button">TRAVOU AGORA</button></header><nav class="side sidebar" aria-label="Principal"><button class="nav nav-item active" data-screen="inicio" aria-label="Início" aria-current="page"><span><svg aria-hidden="true" focusable="false"><use href="#icon-home"/></svg>Início</span></button><button class="nav nav-item" data-screen="trace" aria-label="TracePoints"><span><svg aria-hidden="true" focusable="false"><use href="#icon-target"/></svg>TracePoints</span></button><button class="nav nav-item" data-screen="tecnico" aria-label="Visão técnica"><span><svg aria-hidden="true" focusable="false"><use href="#icon-terminal"/></svg>Técnico</span></button><button class="nav nav-item" data-screen="config" aria-label="Configurações"><span><svg aria-hidden="true" focusable="false"><use href="#icon-settings"/></svg>Configurações</span></button><button class="nav nav-item" data-screen="exportar" aria-label="Exportar"><span><svg aria-hidden="true" focusable="false"><use href="#icon-share"/></svg>Exportar</span></button></nav><main class="main main-content">
+<section id="inicio" class="screen active"><div class="title"><h1>Sua conexão está estável</h1><p>Nenhum gargalo severo identificado no gateway local nas últimas 12 horas.</p></div><div class="box route"><div class="node"><i aria-hidden="true">PC</i><b>Seu PC</b><small>Ativo</small></div><span class="connector"></span><div class="node"><i aria-hidden="true">LAN</i><b>Wi‑Fi / Rede</b><small>3 ms Jitter</small></div><span class="connector"></span><div class="node"><i aria-hidden="true">GW</i><b>Gateway Local</b><small>12 ms Latency</small></div><span class="connector"></span><div class="node"><i aria-hidden="true">ISP</i><b>Provedor / ISP</b><small>24 ms DNS</small></div><span class="connector"></span><div class="node"><i aria-hidden="true">SRV</i><b>Servidor</b><small>Rotas OK</small></div></div><div class="grid"><div class="box panel"><h2>Histórico contínuo (Últimos 15 minutos)</h2><div class="chart"><svg viewBox="0 0 700 150" preserveAspectRatio="none"><polyline points="0,90 100,95 190,84 270,91 350,42 410,88 520,92 700,91" fill="none" stroke="#d5a54c" stroke-width="2"/><polyline points="0,110 120,112 220,106 330,113 450,108 570,111 700,109" fill="none" stroke="#43c67d" stroke-width="2"/></svg></div></div><aside class="box panel"><h2>Entenda os TracePoints locais</h2><p class="note">Ao clicar em <strong>“Travou agora”</strong>, criamos um TracePoint contendo o histórico de rede anterior e posterior ao evento.</p><p class="ok">Sensores: 1/6 Ativo | Coletor Local: OK</p><button class="primary">Criar TracePoint</button></aside></div></section>
+<section id="trace" class="screen"><div class="title"><h1>TracePoints</h1><p>Incidentes automáticos e eventos marcados manualmente.</p></div><div class="filters"><button class="filter on">Todos</button><button class="filter">Automáticos</button><button class="filter">Manuais</button><button class="filter">Últimos 7 dias</button></div><div class="events"><article class="event"><time>Hoje 14:18</time><span class="chip">AUTOMÁTICO</span><p><b>Instabilidade no Wi‑Fi</b><br>Jitter elevado por 34 segundos; gateway afetado.</p><span class="sev">Moderado →</span></article><article class="event"><time>Hoje 11:42</time><span class="chip">MANUAL</span><p><b>Travada marcada</b><br>Rede estável; CPU em 96% durante o evento.</p><span>Ver detalhe →</span></article><article class="event"><time>Ontem 22:07</time><span class="chip">AUTOMÁTICO</span><p><b>Perda na rota externa</b><br>Gateway normal; dois destinos públicos degradados.</p><span class="sev">Alto →</span></article><article class="event"><time>Ontem 18:31</time><span class="chip">AUTOMÁTICO</span><p><b>Pico breve sem impacto</b><br>42 ms por 2 segundos; evento não confirmado.</p><span>Baixo →</span></article></div></section>
+<section id="tecnico" class="screen"><div class="title"><h1>Visão técnica</h1><p>Métricas brutas e agregadas da rede e do sistema.</p></div><div class="metrics"><div class="metric"><small>Gateway</small><b>12 ms</b></div><div class="metric"><small>Internet</small><b>24 ms</b></div><div class="metric"><small>Jitter</small><b>3 ms</b></div><div class="metric"><small>Perda</small><b>0.0%</b></div></div><div class="charts"><div class="box panel"><h2>Latência · Gateway / Internet</h2><div class="chart"><svg viewBox="0 0 700 150" preserveAspectRatio="none"><polyline points="0,104 100,98 180,110 270,45 330,102 440,96 550,108 700,100" fill="none" stroke="#f44b3f" stroke-width="2"/><polyline points="0,120 130,118 260,115 390,122 520,117 700,119" fill="none" stroke="#d4a148" stroke-width="2"/></svg></div></div><div class="box panel"><h2>Recursos do sistema · CPU / RAM</h2><div class="chart"><svg viewBox="0 0 700 150" preserveAspectRatio="none"><polyline points="0,90 90,80 180,94 260,70 340,86 440,76 540,90 700,82" fill="none" stroke="#43c67d" stroke-width="2"/><polyline points="0,110 100,108 200,105 300,104 400,100 500,102 600,98 700,100" fill="none" stroke="#707781" stroke-width="2"/></svg></div></div></div></section>
+<section id="config" class="screen"><div class="title"><h1>Configurações</h1><p>Controle coleta, destinos, retenção e inicialização.</p></div><div class="box settings"><aside class="settings-menu"><div class="on">Coleta</div><div>Alvos</div><div>Armazenamento</div><div>Inicialização</div><div>Privacidade</div></aside><div class="form"><div class="group"><h3>Monitoramento de rede</h3><p>Frequências padrão equilibram precisão e consumo.</p><label class="field"><span>Gateway</span><select><option>A cada 1 segundo</option></select></label><label class="field"><span>Internet</span><select><option>A cada 2 segundos</option></select></label><label class="field"><span>DNS sintético</span><select><option>A cada 30 segundos</option></select></label></div><div class="group"><h3>Execução contínua</h3><p>O coletor continua ativo quando a janela é fechada.</p><label class="field"><span>Iniciar com o Windows</span><i class="toggle"></i></label><label class="field"><span>Reduzir coleta em bateria</span><i class="toggle"></i></label></div><button class="primary">Salvar alterações</button></div></div></section>
+<section id="exportar" class="screen"><div class="title"><h1>Exportar diagnóstico</h1><p>Gere um snapshot local anonimizado para análise ou suporte.</p></div><div class="export"><div class="box panel checks"><h2>Conteúdo da exportação</h2><label><input type="checkbox" checked> Métricas de rede e agregados</label><label><input type="checkbox" checked> TracePoints e evidências</label><label><input type="checkbox" checked> Capabilities e versão do aplicativo</label><label><input type="checkbox"> Métricas detalhadas do sistema</label><div class="group"><h3>Período</h3><select class="filter"><option>Últimas 24 horas</option><option>Últimos 7 dias</option></select></div><button class="primary">Escolher destino e exportar</button></div><aside class="box preview"><h2>Prévia anonimizada</h2><code>{
+  "period": "24h",
+  "networkSamples": 8421,
+  "tracePoints": 3,
+  "gatewayHost": "removed",
+  "ssid": "removed",
+  "interfaceName": "removed",
+  "privacy": "anonymized"
+}</code><p class="note">Hosts, IPs, SSID, MAC e caminhos locais são removidos por padrão.</p></aside></div></section>
+</main></div><script>
+document.querySelectorAll('.nav').forEach((button) => {
+  button.addEventListener('click', () => {
+    document.querySelectorAll('.nav').forEach((item) => {
+      item.classList.remove('active');
+      item.removeAttribute('aria-current');
+    });
+    document.querySelectorAll('.screen').forEach((screen) => screen.classList.remove('active'));
+    button.classList.add('active');
+    button.setAttribute('aria-current', 'page');
+    document.getElementById(button.dataset.screen).classList.add('active');
+  });
+});
+</script></body></html>
