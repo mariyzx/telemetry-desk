@@ -3,7 +3,7 @@ import type { NetworkProbePort, TcpReachabilityPort } from '../ports/telemetry-p
 import {
   DEFAULT_INTERNET_PRIMARY_HOST,
   DEFAULT_INTERNET_SECONDARY_HOST,
-  DEFAULT_INTERNET_TCP_FALLBACK_PORT,
+  DEFAULT_INTERNET_TCP_FALLBACK_PORTS,
   GetInternetStatusService,
 } from './get-internet-status.service.js';
 
@@ -43,6 +43,7 @@ describe('GetInternetStatusService', () => {
     });
     expect(DEFAULT_INTERNET_PRIMARY_HOST).toBe('1.1.1.1');
     expect(DEFAULT_INTERNET_SECONDARY_HOST).toBe('8.8.8.8');
+    expect(DEFAULT_INTERNET_TCP_FALLBACK_PORTS).toEqual([53, 443]);
   });
 
   it('falls back to TCP reachability without inventing ICMP latency', async () => {
@@ -62,9 +63,35 @@ describe('GetInternetStatusService', () => {
       observedAtEpochMs: 1_700_000_000_000,
       monotonicMs: 42,
     });
-    expect(tcpReachability.isReachable).toHaveBeenCalledWith(
-      DEFAULT_INTERNET_PRIMARY_HOST,
-      DEFAULT_INTERNET_TCP_FALLBACK_PORT,
+    expect(tcpReachability.isReachable).toHaveBeenCalledWith(DEFAULT_INTERNET_PRIMARY_HOST, 53);
+    expect(tcpReachability.isReachable).toHaveBeenCalledTimes(1);
+  });
+
+  it('tries DNS TCP/53 then TCP/443 when the first fallback port fails', async () => {
+    const tcpReachability: TcpReachabilityPort = {
+      isReachable: vi.fn().mockImplementation(async (_host, port) => port === 443),
+    };
+    const service = new GetInternetStatusService(
+      clock,
+      { probe: async () => ({ latencyMs: null, quality: 'timeout' }) },
+      undefined,
+      tcpReachability,
+    );
+
+    await expect(service.probeHost(DEFAULT_INTERNET_SECONDARY_HOST)).resolves.toMatchObject({
+      host: DEFAULT_INTERNET_SECONDARY_HOST,
+      latencyMs: null,
+      quality: 'reachable',
+    });
+    expect(tcpReachability.isReachable).toHaveBeenNthCalledWith(
+      1,
+      DEFAULT_INTERNET_SECONDARY_HOST,
+      53,
+    );
+    expect(tcpReachability.isReachable).toHaveBeenNthCalledWith(
+      2,
+      DEFAULT_INTERNET_SECONDARY_HOST,
+      443,
     );
   });
 

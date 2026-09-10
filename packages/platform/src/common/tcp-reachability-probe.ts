@@ -54,7 +54,7 @@ export class NodeTcpReachabilityProbe implements TcpReachabilityPort {
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 
-  isReachable(host: string, port = 443): Promise<boolean> {
+  isReachable(host: string, port = 53): Promise<boolean> {
     return this.connect({ host, port, timeoutMs: this.timeoutMs });
   }
 }

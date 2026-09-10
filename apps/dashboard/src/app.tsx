@@ -165,7 +165,7 @@ export function App() {
         </p>
         <p>
           Latência ICMP quando disponível; se o firewall bloquear ping, o app confirma
-          alcançabilidade via TCP/443 sem inventar RTT.
+          alcançabilidade via TCP/53 (DNS) ou TCP/443 sem inventar RTT.
         </p>
       </section>
       <section aria-labelledby="trace-points-heading">

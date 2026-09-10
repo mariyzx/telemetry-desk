@@ -77,7 +77,7 @@ async function flushEffects(): Promise<void> {
   });
 }
 
-it('shows TCP reachability when ICMP is blocked but host answers on 443', async () => {
+it('shows TCP reachability when ICMP is blocked but host answers on DNS/HTTPS ports', async () => {
   window.telemetryDesk = {
     getRuntimeStatus: vi.fn().mockResolvedValue(runtimeReady()),
     getGatewayStatus: vi.fn().mockResolvedValue(gatewayReady()),

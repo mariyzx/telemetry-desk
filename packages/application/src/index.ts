@@ -28,6 +28,7 @@ export type {
 export {
   DEFAULT_INTERNET_PRIMARY_HOST,
   DEFAULT_INTERNET_SECONDARY_HOST,
+  DEFAULT_INTERNET_TCP_FALLBACK_PORTS,
   GetInternetStatusService,
 } from './services/get-internet-status.service.js';
 export { CachedGetInternetStatusService } from './services/cached-get-internet-status.service.js';

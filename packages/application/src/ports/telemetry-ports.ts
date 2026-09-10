@@ -4,7 +4,7 @@ export type ProbeQuality =
   | 'permission_denied'
   | 'timeout'
   | 'unavailable'
-  /** Host answered on a non-ICMP path (e.g. TCP/443); latencyMs must stay null. */
+  /** Host answered on a non-ICMP path (e.g. TCP/53 or TCP/443); latencyMs must stay null. */
   | 'reachable';
 
 export interface Clock {
@@ -18,6 +18,7 @@ export interface NetworkProbePort {
 
 /**
  * Lightweight reachability check used when ICMP times out.
+ * Callers pick DNS-appropriate ports (typically 53, then 443).
  * Must not invent ICMP latency — only boolean connectivity.
  */
 export interface TcpReachabilityPort {

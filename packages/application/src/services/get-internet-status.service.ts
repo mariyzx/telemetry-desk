@@ -7,7 +7,11 @@ import type {
 
 export const DEFAULT_INTERNET_PRIMARY_HOST = '1.1.1.1';
 export const DEFAULT_INTERNET_SECONDARY_HOST = '8.8.8.8';
-export const DEFAULT_INTERNET_TCP_FALLBACK_PORT = 443;
+/**
+ * Public DNS resolvers: TCP/53 (DNS) first, then TCP/443 (DoH/HTTPS).
+ * Relying on 443 alone mis-classifies hosts that filter HTTPS but still answer DNS.
+ */
+export const DEFAULT_INTERNET_TCP_FALLBACK_PORTS: readonly number[] = [53, 443];
 
 export interface InternetTargetHosts {
   primary: string;
@@ -30,12 +34,13 @@ export interface InternetStatus {
 }
 
 /**
- * Probes public internet hosts via ICMP, with optional TCP/443 fallback when ICMP
- * times out (common when firewalls drop public echo requests). TCP success means
- * reachability only — never reported as ICMP latency.
+ * Probes public internet hosts via ICMP, with optional TCP fallback when ICMP
+ * times out (common when firewalls drop public echo requests). Tries DNS-appropriate
+ * ports (53, then 443). TCP success means reachability only — never reported as ICMP latency.
  */
 export class GetInternetStatusService {
   readonly hosts: InternetTargetHosts;
+  private readonly tcpFallbackPorts: readonly number[];
 
   constructor(
     private readonly clock: Clock,
@@ -45,9 +50,10 @@ export class GetInternetStatusService {
       secondary: DEFAULT_INTERNET_SECONDARY_HOST,
     },
     private readonly tcpReachability: TcpReachabilityPort | null = null,
-    private readonly tcpFallbackPort: number = DEFAULT_INTERNET_TCP_FALLBACK_PORT,
+    tcpFallbackPorts: readonly number[] = DEFAULT_INTERNET_TCP_FALLBACK_PORTS,
   ) {
     this.hosts = hosts;
+    this.tcpFallbackPorts = tcpFallbackPorts;
   }
 
   async probeHost(host: string): Promise<InternetTargetSample> {
@@ -56,10 +62,13 @@ export class GetInternetStatusService {
     let quality = probe.quality;
 
     if (quality === 'timeout' && this.tcpReachability !== null) {
-      const reachable = await this.tcpReachability.isReachable(host, this.tcpFallbackPort);
-      if (reachable) {
-        latencyMs = null;
-        quality = 'reachable';
+      for (const port of this.tcpFallbackPorts) {
+        const reachable = await this.tcpReachability.isReachable(host, port);
+        if (reachable) {
+          latencyMs = null;
+          quality = 'reachable';
+          break;
+        }
       }
     }
 

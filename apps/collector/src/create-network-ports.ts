@@ -12,7 +12,7 @@ import {
 /**
  * Gateway resolve + ICMP probe run inside the supervised collector child.
  * Desktop main only supervises and forwards IPC; it does not call ping here.
- * TCP reachability is used only as an internet ICMP-timeout fallback.
+ * TCP reachability is used only as an internet ICMP-timeout fallback (DNS ports).
  */
 export function createNetworkPorts(platform: NodeJS.Platform): {
   gatewayResolver: GatewayResolverPort;
