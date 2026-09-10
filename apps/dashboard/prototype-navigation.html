@@ -1,5 +1,10 @@
 <!doctype html>
-<html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,"><title>TelemetryDesk — Protótipo</title>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,">
+<title>TelemetryDesk — Protótipo</title>
 <style>
 :root {
   color-scheme: dark;
@@ -37,98 +42,416 @@ button { cursor: pointer; }
 
 .app, .app-shell { width: 100vw; height: 100vh; min-width: 0; overflow: hidden; display: grid; grid-template: 48px 1fr / 72px 1fr; background: var(--color-bg); }
 .top, .topbar { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--space-3); min-width: 0; padding: 0 var(--space-4); border-bottom: 1px solid var(--color-border); background: var(--color-surface); }
-.logo { width: 24px; height: 24px; flex: 0 0 auto; color: var(--color-danger); }
-.logo svg { display: block; width: 100%; height: 100%; }
-.brand { font-size: 13px; font-weight: 750; letter-spacing: -.01em; }
-.live { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--color-success); font: 700 9px var(--font-mono); letter-spacing: .08em; }
+.logo { width: 26px; height: 26px; flex: 0 0 auto; display: grid; place-items: center; border-radius: var(--radius-sm); background: var(--color-danger); color: #fff; }
+.logo svg { display: block; width: 14px; height: 14px; }
+.brand { font-size: 14px; font-weight: 700; letter-spacing: -.01em; }
+.live { display: inline-flex; align-items: center; gap: 6px; color: var(--color-success); font: 12px var(--font-mono); letter-spacing: .04em; }
 .live::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 3px rgb(70 204 131 / 12%); }
-.updated { margin-left: auto; color: var(--color-muted); font: 9px var(--font-mono); white-space: nowrap; }
-.button, .danger, .primary, .filter { min-height: 32px; border: 1px solid transparent; border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); font-weight: 700; transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease; }
-.danger, .primary { background: var(--color-danger); color: var(--color-bg); }
-.danger:hover, .primary:hover { background: #ff6a58; }
+.updated { margin-left: auto; color: var(--color-muted); font: 12px var(--font-mono); white-space: nowrap; }
+.button, .danger, .primary, .filter, .filter-button { min-height: 32px; border: 1px solid transparent; border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); font-weight: 700; transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease; }
+.danger { display: inline-flex; align-items: center; gap: 6px; background: var(--color-danger); color: #fff; }
+.danger:hover { background: #ff6a58; }
+.danger .icon { width: 12px; height: 12px; }
+.primary { background: var(--color-danger); color: var(--color-bg); }
+.primary:hover { background: #ff6a58; }
 
-.side, .sidebar { min-height: 0; padding: var(--space-2); border-right: 1px solid var(--color-border); background: var(--color-surface); }
-.nav, .nav-item { width: 56px; height: 56px; display: grid; place-items: center; gap: 2px; border: 1px solid transparent; border-radius: var(--radius-md); background: transparent; color: var(--color-muted); font-size: 8px; line-height: 1; }
-.nav svg { width: 20px; height: 20px; }
+.side, .sidebar { min-height: 0; padding: var(--space-4) var(--space-2); border-right: 1px solid var(--color-border); background: var(--color-surface); display: flex; flex-direction: column; gap: var(--space-4); align-items: center; }
+.nav, .nav-item { width: 56px; height: 56px; display: grid; place-items: center; gap: 2px; border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--color-muted); font-size: 10px; line-height: 1; font-weight: 500; }
+.nav svg, .nav-item .icon { width: 20px; height: 20px; }
 .nav:hover { background: var(--color-surface-raised); color: var(--color-text); }
-.nav.active { border-color: var(--color-border); background: var(--color-surface-raised); color: var(--color-danger); }
-.nav span { display: grid; justify-items: center; gap: 6px; }
+.nav.active, .nav-item.is-active { border-color: transparent; background: rgb(255 77 56 / 8%); color: var(--color-text); }
+.nav span { display: grid; justify-items: center; gap: 4px; }
 
 .main, .main-content { display: flex; flex-direction: column; gap: var(--space-5); min-width: 0; min-height: 0; overflow: auto; padding: var(--space-6); }
 .screen { display: none; }
-.screen.active { display: block; }
-.title h1 { margin: 0 0 var(--space-1); font-size: 20px; line-height: 1.25; }
-.title p { margin: 0 0 var(--space-5); color: var(--color-muted); }
+.screen.active, .screen.is-active { display: block; }
+.screen[hidden] { display: none !important; }
+.title h1, .screen-title { margin: 0 0 var(--space-1); font-size: 20px; line-height: 1.25; font-weight: 700; }
+.title p, .screen-subtitle { margin: 0 0 var(--space-5); color: var(--color-muted); font-size: 13px; }
 .box, .card { border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
-.route { height: 210px; display: flex; align-items: center; justify-content: space-around; padding: var(--space-6); }
-.node { min-width: 100px; text-align: center; }
-.node i { width: 42px; height: 42px; display: grid; place-items: center; margin: auto; border: 1px solid var(--color-border); border-radius: 50%; color: var(--color-success); font-style: normal; font-size: 18px; }
-.node b { display: block; margin-top: 10px; }
-.node small { color: var(--color-muted); font: 9px var(--font-mono); }
-.connector { max-width: 110px; height: 1px; flex: 1; background: var(--color-border); }
-.grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: var(--space-5); margin-top: var(--space-5); }
-.panel { padding: var(--space-4); }
-.panel h2, .preview h2 { margin: 0 0 14px; font-size: 11px; }
-.chart { height: 230px; position: relative; background: repeating-linear-gradient(0deg, transparent, transparent 45px, var(--color-surface-raised) 46px); }
-.chart svg { position: absolute; inset: 20px 0; width: 100%; height: 160px; }
-.note { color: var(--color-muted); line-height: 1.6; }
-.note strong { color: var(--color-text); }
-.chip, .badge { display: inline-block; padding: var(--space-1) 7px; border-radius: var(--radius-sm); background: rgb(255 77 56 / 12%); color: #ff7665; font-size: 8px; }
-.filters { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: 14px; }
-.filter { border-color: var(--color-border); background: var(--color-surface); color: var(--color-muted); }
-.filter:hover, .filter.on { border-color: var(--color-border-strong); background: var(--color-surface-raised); color: var(--color-text); }
-.events { display: grid; gap: var(--space-2); }
-.event { display: grid; grid-template-columns: 100px 90px 1fr 100px; align-items: center; padding: 15px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
-.event:hover { border-color: var(--color-border-strong); }
-.event time { font: 10px var(--font-mono); }
-.event p { margin: 0; color: var(--color-muted); }
+
+/* —— Início —— */
+.diagnostic-path {
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-8);
+  border-radius: var(--radius-lg);
+}
+.path-node { flex: 0 0 auto; min-width: 96px; display: flex; flex-direction: column; align-items: center; gap: var(--space-3); text-align: center; }
+.path-node__icon {
+  width: 48px; height: 48px; display: grid; place-items: center;
+  border: 1px solid var(--color-border); border-radius: 50%;
+  background: var(--color-bg); color: var(--color-success);
+  box-shadow: 0 0 0 4px rgb(70 204 131 / 8%);
+}
+.path-node__icon svg { width: 24px; height: 24px; }
+.path-node__label { font-size: 13px; font-weight: 600; }
+.path-node__meta { color: var(--color-muted); font: 11px var(--font-mono); }
+.path-connector { flex: 1 1 40px; min-width: 24px; max-width: 110px; height: 2px; align-self: center; margin-bottom: 36px; background: var(--color-border); }
+
+.home-grid { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: var(--space-5); margin-top: var(--space-5); align-items: stretch; }
+.chart-card, .tracepoint-card { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); min-height: 0; }
+.chart-card { padding: var(--space-3); gap: var(--space-2); }
+.chart-card__header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.chart-card__title { margin: 0; font-size: 12px; font-weight: 600; }
+.chart-legend { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; }
+.chart-legend__item { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--color-muted); font-size: 10px; }
+.chart-legend__swatch { width: 10px; height: 2px; border-radius: 1px; }
+.chart-legend__swatch--gateway { background: var(--color-success); }
+.chart-legend__swatch--internet { background: var(--color-warning); }
+
+.chart-plot {
+  position: relative; flex: 1; min-height: 180px;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 29px,
+      var(--color-border) 29px 30px
+    );
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.chart-plot svg.chart-lines { position: absolute; inset: 12px 0 8px; width: 100%; height: calc(100% - 20px); }
+.event-marker {
+  position: absolute; top: 0; bottom: 0; width: 1px;
+  border-left: 1px dashed var(--color-danger);
+  pointer-events: none;
+}
+.event-marker--warning { border-left-color: var(--color-warning); }
+.event-marker__label {
+  position: absolute; top: 6px; left: 4px;
+  padding: 2px 4px; border-radius: 2px;
+  font-size: 9px; white-space: nowrap;
+  background: rgb(255 77 56 / 13%); color: var(--color-danger);
+}
+.event-marker--warning .event-marker__label {
+  background: rgb(232 174 74 / 13%); color: var(--color-warning);
+}
+
+.tracepoint-card__title { display: flex; align-items: center; gap: var(--space-2); margin: 0; font-size: 13px; font-weight: 600; }
+.tracepoint-card__title .icon { width: 16px; height: 16px; color: var(--color-warning); flex: 0 0 auto; }
+.tracepoint-card__body { margin: 0; color: var(--color-muted); font-size: 12px; line-height: 1.5; }
+.tracepoint-card__body strong { color: var(--color-text); font-weight: 600; }
+.tracepoint-card__footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; margin-top: auto; }
+.tracepoint-card__status { display: inline-flex; align-items: center; gap: var(--space-2); font: 11px var(--font-mono); color: var(--color-text); }
+.tracepoint-card__status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--color-success); box-shadow: 0 0 0 3px rgb(70 204 131 / 12%); }
+.button-secondary {
+  min-height: 28px; padding: 4px 10px;
+  border: 1px solid transparent; border-radius: var(--radius-sm);
+  background: rgb(255 77 56 / 13%); color: var(--color-danger); font-weight: 600; font-size: 11px;
+}
+.button-secondary:hover { background: rgb(255 77 56 / 20%); }
+
+/* —— TracePoints / Técnico (legado Task 1; refinado em Task 3) —— */
+.chip, .badge { display: inline-block; padding: var(--space-1) 7px; border-radius: var(--radius-sm); background: rgb(255 77 56 / 12%); color: #ff7665; font-size: 8px; font-weight: 700; letter-spacing: .04em; }
+.filters, .filter-bar { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: 14px; }
+.filter, .filter-button { border-color: var(--color-border); background: var(--color-surface); color: var(--color-muted); font-weight: 600; }
+.filter:hover, .filter-button:hover { border-color: var(--color-border-strong); background: var(--color-surface-raised); color: var(--color-text); }
+.filter.on, .filter-button[aria-pressed="true"] { border-color: var(--color-danger); background: rgb(255 77 56 / 12%); color: var(--color-text); }
+.events, .event-list { display: grid; gap: var(--space-2); }
+.event, .event-row { display: grid; grid-template-columns: 100px 90px 1fr minmax(110px, auto); align-items: center; gap: var(--space-3); padding: 15px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
+.event:hover, .event-row:hover { border-color: var(--color-border-strong); }
+.event time, .event-row time { font: 10px var(--font-mono); color: var(--color-muted); }
+.event p, .event-row p { margin: 0; color: var(--color-muted); }
+.event-row__title { color: var(--color-text); font-weight: 700; }
 .sev { color: var(--color-warning); }
 .ok { color: var(--color-success); }
-.metrics { display: grid; grid-template-columns: repeat(4, 1fr); margin-bottom: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
-.metric { padding: var(--space-4); border-right: 1px solid var(--color-border); }
-.metric:last-child { border: 0; }
-.metric small { color: var(--color-muted); }
-.metric b { display: block; margin-top: var(--space-2); font: 700 23px var(--font-mono); }
-.charts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.settings { display: grid; grid-template-columns: 180px 1fr; min-height: 500px; }
-.settings-menu { padding: var(--space-3); border-right: 1px solid var(--color-border); }
-.settings-menu div { padding: 10px; color: var(--color-muted); }
-.settings-menu .on { border-radius: var(--radius-sm); background: var(--color-surface-raised); color: var(--color-text); }
-.form { max-width: 720px; padding: 22px; }
+.event-row__action { justify-self: end; text-align: right; font-size: 11px; }
+.metrics, .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); margin-bottom: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); overflow: hidden; }
+.metric, .metric-card { padding: var(--space-4); border-right: 1px solid var(--color-border); }
+.metric:last-child, .metric-card:last-child { border-right: 0; }
+.metric small, .metric-card small { color: var(--color-muted); }
+.metric b, .metric-card b { display: block; margin-top: var(--space-2); font: 700 23px/1.1 var(--font-mono); }
+.charts, .technical-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+.panel { padding: var(--space-4); }
+.panel h2, .preview h2 { margin: 0 0 14px; font-size: 12px; font-weight: 600; }
+.chart { height: 230px; position: relative; background: repeating-linear-gradient(0deg, transparent 0 45px, var(--color-border) 45px 46px); border-radius: var(--radius-sm); }
+.chart svg { position: absolute; inset: 20px 0; width: 100%; height: 160px; }
+
+/* —— Config / Export (legado; refinado em Task 4) —— */
+.settings, .settings-layout { display: grid; grid-template-columns: 180px 1fr; min-height: 500px; }
+.settings-menu, .settings-nav { padding: var(--space-3); border-right: 1px solid var(--color-border); display: flex; flex-direction: column; gap: 2px; }
+.settings-menu div, .settings-nav button { width: 100%; text-align: left; padding: 10px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--color-muted); font-weight: 500; }
+.settings-menu .on, .settings-nav button[aria-current="true"] { background: var(--color-surface-raised); color: var(--color-text); }
+.form, .form-section { max-width: 720px; padding: 22px; }
 .group { padding: 17px 0; border-bottom: 1px solid var(--color-border); }
 .group h3 { margin: 0 0 5px; font-size: 12px; }
 .group p { margin: 0 0 var(--space-3); color: var(--color-muted); }
-.field { display: grid; grid-template-columns: 1fr 180px; align-items: center; margin: 10px 0; }
-.field input, .field select { padding: 9px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); background: var(--color-bg); }
-.toggle { width: 34px; height: 18px; position: relative; justify-self: end; border-radius: 20px; background: var(--color-success); }
-.toggle::after { content: ""; width: 14px; height: 14px; position: absolute; top: 2px; right: 2px; border-radius: 50%; background: white; }
-.export { display: grid; grid-template-columns: 1fr 360px; gap: var(--space-5); }
-.checks label { display: block; padding: var(--space-3); border-bottom: 1px solid var(--color-border); }
+.field, .field-row { display: grid; grid-template-columns: 1fr 180px; align-items: center; margin: 10px 0; gap: var(--space-3); }
+.field input, .field select, .field-row select { min-height: 36px; padding: 9px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); background: var(--color-bg); }
+.switch, .toggle { width: 34px; height: 18px; position: relative; justify-self: end; border-radius: 20px; background: var(--color-success); border: 0; appearance: none; -webkit-appearance: none; }
+.toggle::after, .switch::after { content: ""; width: 14px; height: 14px; position: absolute; top: 2px; right: 2px; border-radius: 50%; background: white; }
+.export, .export-grid { display: grid; grid-template-columns: 1fr 360px; gap: var(--space-5); }
+.checks label, .check-option { display: block; padding: var(--space-3); border-bottom: 1px solid var(--color-border); }
 .preview { padding: var(--space-4); }
-.preview code { display: block; color: var(--color-muted); font: 9px/1.7 var(--font-mono); white-space: pre-wrap; }
+.preview code, .code-preview { display: block; color: var(--color-muted); font: 9px/1.7 var(--font-mono); white-space: pre-wrap; max-height: 320px; overflow: auto; }
 .primary { margin-top: var(--space-4); }
+.note { color: var(--color-muted); line-height: 1.6; }
+.note strong { color: var(--color-text); }
+.privacy-note { display: flex; gap: var(--space-2); align-items: flex-start; margin-top: var(--space-4); color: var(--color-muted); line-height: 1.5; }
+.privacy-note .icon { width: 16px; height: 16px; flex: 0 0 auto; color: var(--color-warning); margin-top: 1px; }
 
-@media (max-width: 850px) {
-  .updated { display: none; }
-  .main { padding: var(--space-4); }
-  .grid, .export, .charts { grid-template-columns: 1fr; }
-  .route { overflow: auto; justify-content: flex-start; }
-  .connector { min-width: 50px; }
-  .settings { grid-template-columns: 1fr; }
-  .settings-menu { display: none; }
-  .metrics { grid-template-columns: 1fr 1fr; }
-  .event { grid-template-columns: 80px 1fr; }
-  .event > *:nth-child(2), .event > *:nth-child(4) { display: none; }
+.icon { display: block; width: 1em; height: 1em; }
+
+@media (max-width: 1100px) {
+  .home-grid, .export, .export-grid, .charts, .technical-grid { grid-template-columns: 1fr; }
+  .metrics, .metrics-grid { grid-template-columns: 1fr 1fr; }
+  .settings, .settings-layout { grid-template-columns: 1fr; }
+  .settings-menu, .settings-nav { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--color-border); }
+  .settings-menu div, .settings-nav button { width: auto; }
 }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }
-</style></head><body>
-<svg aria-hidden="true" focusable="false" width="0" height="0" style="position:absolute"><symbol id="icon-home" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol><symbol id="icon-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol><symbol id="icon-terminal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m7 9 3 3-3 3m5 0h5" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol><symbol id="icon-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol><symbol id="icon-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="2" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="6" cy="12" r="2" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="18" cy="19" r="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m8 11 8-5m-8 7 8 5" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol><symbol id="logo-mark" viewBox="0 0 24 24"><path d="M4 12h4l2-6 4 12 2-6h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol></svg>
-<div class="app app-shell"><header class="top topbar"><span class="logo"><svg aria-hidden="true" focusable="false"><use href="#logo-mark"/></svg></span><span class="brand">TelemetryDesk</span><span class="live">MONITORANDO</span><span class="updated">Última atualização: 14:32:05.102</span><button class="danger button">TRAVOU AGORA</button></header><nav class="side sidebar" aria-label="Principal"><button class="nav nav-item active" data-screen="inicio" aria-label="Início" aria-current="page"><span><svg aria-hidden="true" focusable="false"><use href="#icon-home"/></svg>Início</span></button><button class="nav nav-item" data-screen="trace" aria-label="TracePoints"><span><svg aria-hidden="true" focusable="false"><use href="#icon-target"/></svg>TracePoints</span></button><button class="nav nav-item" data-screen="tecnico" aria-label="Visão técnica"><span><svg aria-hidden="true" focusable="false"><use href="#icon-terminal"/></svg>Técnico</span></button><button class="nav nav-item" data-screen="config" aria-label="Configurações"><span><svg aria-hidden="true" focusable="false"><use href="#icon-settings"/></svg>Configurações</span></button><button class="nav nav-item" data-screen="exportar" aria-label="Exportar"><span><svg aria-hidden="true" focusable="false"><use href="#icon-share"/></svg>Exportar</span></button></nav><main class="main main-content">
-<section id="inicio" class="screen active"><div class="title"><h1>Sua conexão está estável</h1><p>Nenhum gargalo severo identificado no gateway local nas últimas 12 horas.</p></div><div class="box route"><div class="node"><i aria-hidden="true">PC</i><b>Seu PC</b><small>Ativo</small></div><span class="connector"></span><div class="node"><i aria-hidden="true">LAN</i><b>Wi‑Fi / Rede</b><small>3 ms Jitter</small></div><span class="connector"></span><div class="node"><i aria-hidden="true">GW</i><b>Gateway Local</b><small>12 ms Latency</small></div><span class="connector"></span><div class="node"><i aria-hidden="true">ISP</i><b>Provedor / ISP</b><small>24 ms DNS</small></div><span class="connector"></span><div class="node"><i aria-hidden="true">SRV</i><b>Servidor</b><small>Rotas OK</small></div></div><div class="grid"><div class="box panel"><h2>Histórico contínuo (Últimos 15 minutos)</h2><div class="chart"><svg viewBox="0 0 700 150" preserveAspectRatio="none"><polyline points="0,90 100,95 190,84 270,91 350,42 410,88 520,92 700,91" fill="none" stroke="#d5a54c" stroke-width="2"/><polyline points="0,110 120,112 220,106 330,113 450,108 570,111 700,109" fill="none" stroke="#43c67d" stroke-width="2"/></svg></div></div><aside class="box panel"><h2>Entenda os TracePoints locais</h2><p class="note">Ao clicar em <strong>“Travou agora”</strong>, criamos um TracePoint contendo o histórico de rede anterior e posterior ao evento.</p><p class="ok">Sensores: 1/6 Ativo | Coletor Local: OK</p><button class="primary">Criar TracePoint</button></aside></div></section>
-<section id="trace" class="screen"><div class="title"><h1>TracePoints</h1><p>Incidentes automáticos e eventos marcados manualmente.</p></div><div class="filters"><button class="filter on">Todos</button><button class="filter">Automáticos</button><button class="filter">Manuais</button><button class="filter">Últimos 7 dias</button></div><div class="events"><article class="event"><time>Hoje 14:18</time><span class="chip">AUTOMÁTICO</span><p><b>Instabilidade no Wi‑Fi</b><br>Jitter elevado por 34 segundos; gateway afetado.</p><span class="sev">Moderado →</span></article><article class="event"><time>Hoje 11:42</time><span class="chip">MANUAL</span><p><b>Travada marcada</b><br>Rede estável; CPU em 96% durante o evento.</p><span>Ver detalhe →</span></article><article class="event"><time>Ontem 22:07</time><span class="chip">AUTOMÁTICO</span><p><b>Perda na rota externa</b><br>Gateway normal; dois destinos públicos degradados.</p><span class="sev">Alto →</span></article><article class="event"><time>Ontem 18:31</time><span class="chip">AUTOMÁTICO</span><p><b>Pico breve sem impacto</b><br>42 ms por 2 segundos; evento não confirmado.</p><span>Baixo →</span></article></div></section>
-<section id="tecnico" class="screen"><div class="title"><h1>Visão técnica</h1><p>Métricas brutas e agregadas da rede e do sistema.</p></div><div class="metrics"><div class="metric"><small>Gateway</small><b>12 ms</b></div><div class="metric"><small>Internet</small><b>24 ms</b></div><div class="metric"><small>Jitter</small><b>3 ms</b></div><div class="metric"><small>Perda</small><b>0.0%</b></div></div><div class="charts"><div class="box panel"><h2>Latência · Gateway / Internet</h2><div class="chart"><svg viewBox="0 0 700 150" preserveAspectRatio="none"><polyline points="0,104 100,98 180,110 270,45 330,102 440,96 550,108 700,100" fill="none" stroke="#f44b3f" stroke-width="2"/><polyline points="0,120 130,118 260,115 390,122 520,117 700,119" fill="none" stroke="#d4a148" stroke-width="2"/></svg></div></div><div class="box panel"><h2>Recursos do sistema · CPU / RAM</h2><div class="chart"><svg viewBox="0 0 700 150" preserveAspectRatio="none"><polyline points="0,90 90,80 180,94 260,70 340,86 440,76 540,90 700,82" fill="none" stroke="#43c67d" stroke-width="2"/><polyline points="0,110 100,108 200,105 300,104 400,100 500,102 600,98 700,100" fill="none" stroke="#707781" stroke-width="2"/></svg></div></div></div></section>
-<section id="config" class="screen"><div class="title"><h1>Configurações</h1><p>Controle coleta, destinos, retenção e inicialização.</p></div><div class="box settings"><aside class="settings-menu"><div class="on">Coleta</div><div>Alvos</div><div>Armazenamento</div><div>Inicialização</div><div>Privacidade</div></aside><div class="form"><div class="group"><h3>Monitoramento de rede</h3><p>Frequências padrão equilibram precisão e consumo.</p><label class="field"><span>Gateway</span><select><option>A cada 1 segundo</option></select></label><label class="field"><span>Internet</span><select><option>A cada 2 segundos</option></select></label><label class="field"><span>DNS sintético</span><select><option>A cada 30 segundos</option></select></label></div><div class="group"><h3>Execução contínua</h3><p>O coletor continua ativo quando a janela é fechada.</p><label class="field"><span>Iniciar com o Windows</span><i class="toggle"></i></label><label class="field"><span>Reduzir coleta em bateria</span><i class="toggle"></i></label></div><button class="primary">Salvar alterações</button></div></div></section>
-<section id="exportar" class="screen"><div class="title"><h1>Exportar diagnóstico</h1><p>Gere um snapshot local anonimizado para análise ou suporte.</p></div><div class="export"><div class="box panel checks"><h2>Conteúdo da exportação</h2><label><input type="checkbox" checked> Métricas de rede e agregados</label><label><input type="checkbox" checked> TracePoints e evidências</label><label><input type="checkbox" checked> Capabilities e versão do aplicativo</label><label><input type="checkbox"> Métricas detalhadas do sistema</label><div class="group"><h3>Período</h3><select class="filter"><option>Últimas 24 horas</option><option>Últimos 7 dias</option></select></div><button class="primary">Escolher destino e exportar</button></div><aside class="box preview"><h2>Prévia anonimizada</h2><code>{
+
+@media (max-width: 1024px) {
+  .updated { display: none; }
+  .main, .main-content { padding: var(--space-4); }
+  .diagnostic-path { overflow-x: auto; justify-content: flex-start; }
+  .path-connector { min-width: 32px; flex: 0 0 40px; }
+  .event, .event-row { grid-template-columns: 80px 1fr; }
+  .event > *:nth-child(2), .event > *:nth-child(4),
+  .event-row > *:nth-child(2), .event-row > *:nth-child(4) { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+</style>
+</head>
+<body>
+<svg aria-hidden="true" focusable="false" width="0" height="0" style="position:absolute">
+  <symbol id="icon-home" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+  <symbol id="icon-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+  <symbol id="icon-terminal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m7 9 3 3-3 3m5 0h5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+  <symbol id="icon-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+  <symbol id="icon-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="2" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="6" cy="12" r="2" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="18" cy="19" r="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m8 11 8-5m-8 7 8 5" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+  <symbol id="logo-mark" viewBox="0 0 24 24"><path d="M4 12h4l2-6 4 12 2-6h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="icon-alert" viewBox="0 0 24 24"><path d="M12 3 2.5 20h19L12 3z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 9v5m0 3.5v.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+  <symbol id="icon-monitor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8 20h8M12 16v4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+  <symbol id="icon-wifi" viewBox="0 0 24 24"><path d="M5 12.5a9 9 0 0 1 14 0M8.2 15.5a5 5 0 0 1 7.6 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="19" r="1.2" fill="currentColor"/></symbol>
+  <symbol id="icon-hard-drive" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M3 13h18" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="7" cy="16.5" r="1" fill="currentColor"/><circle cx="11" cy="16.5" r="1" fill="currentColor"/></symbol>
+  <symbol id="icon-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M3 12h18M12 3c2.5 2.8 3.8 5.8 3.8 9S14.5 18.2 12 21c-2.5-2.8-3.8-5.8-3.8-9S9.5 5.8 12 3z" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+  <symbol id="icon-server" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="4" y="14" width="16" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="8" cy="6.5" r="1" fill="currentColor"/><circle cx="8" cy="17.5" r="1" fill="currentColor"/></symbol>
+  <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 4.2 2.8 7.4 7 8.5 4.2-1.1 7-4.3 7-8.5V6l-7-3z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 8v5m0 3h.01" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+</svg>
+
+<div class="app app-shell">
+  <header class="top topbar">
+    <span class="logo"><svg class="icon" aria-hidden="true" focusable="false"><use href="#logo-mark"/></svg></span>
+    <span class="brand">TelemetryDesk</span>
+    <span class="live">MONITORANDO</span>
+    <span class="updated">Última atualização: 14:32:05.102</span>
+    <button type="button" class="danger button">
+      <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-alert"/></svg>
+      TRAVOU AGORA
+    </button>
+  </header>
+
+  <nav class="side sidebar" aria-label="Principal">
+    <button type="button" class="nav nav-item active is-active" data-screen="inicio" aria-label="Início" aria-current="page"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-home"/></svg>Início</span></button>
+    <button type="button" class="nav nav-item" data-screen="trace" aria-label="TracePoints"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-target"/></svg>TracePoints</span></button>
+    <button type="button" class="nav nav-item" data-screen="tecnico" aria-label="Visão técnica"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-terminal"/></svg>Técnico</span></button>
+    <button type="button" class="nav nav-item" data-screen="config" aria-label="Configurações"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-settings"/></svg>Configurações</span></button>
+    <button type="button" class="nav nav-item" data-screen="exportar" aria-label="Exportar"><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-share"/></svg>Exportar</span></button>
+  </nav>
+
+  <main class="main main-content">
+    <section id="inicio" class="screen active is-active" aria-labelledby="inicio-title">
+      <div class="title">
+        <h1 id="inicio-title">Sua conexão está estável</h1>
+        <p>Nenhum gargalo severo identificado no gateway local nas últimas 12 horas.</p>
+      </div>
+
+      <div class="card diagnostic-path" role="list" aria-label="Caminho de diagnóstico da conexão">
+        <div class="path-node" role="listitem">
+          <span class="path-node__icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-monitor"/></svg></span>
+          <span class="path-node__label">Seu PC</span>
+          <span class="path-node__meta">Ativo</span>
+        </div>
+        <span class="path-connector" aria-hidden="true"></span>
+        <div class="path-node" role="listitem">
+          <span class="path-node__icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-wifi"/></svg></span>
+          <span class="path-node__label">Wi-Fi / Rede</span>
+          <span class="path-node__meta">3 ms Jitter</span>
+        </div>
+        <span class="path-connector" aria-hidden="true"></span>
+        <div class="path-node" role="listitem">
+          <span class="path-node__icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-hard-drive"/></svg></span>
+          <span class="path-node__label">Gateway Local</span>
+          <span class="path-node__meta">12 ms Latency</span>
+        </div>
+        <span class="path-connector" aria-hidden="true"></span>
+        <div class="path-node" role="listitem">
+          <span class="path-node__icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-globe"/></svg></span>
+          <span class="path-node__label">Provedor / ISP</span>
+          <span class="path-node__meta">24 ms DNS</span>
+        </div>
+        <span class="path-connector" aria-hidden="true"></span>
+        <div class="path-node" role="listitem">
+          <span class="path-node__icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-server"/></svg></span>
+          <span class="path-node__label">Servidor</span>
+          <span class="path-node__meta">Rotas OK</span>
+        </div>
+      </div>
+
+      <div class="home-grid">
+        <div class="card chart-card">
+          <div class="chart-card__header">
+            <h2 class="chart-card__title">Histórico contínuo (Últimos 15 minutos)</h2>
+            <div class="chart-legend" aria-hidden="true">
+              <span class="chart-legend__item"><span class="chart-legend__swatch chart-legend__swatch--gateway"></span>Gateway (12ms)</span>
+              <span class="chart-legend__item"><span class="chart-legend__swatch chart-legend__swatch--internet"></span>Internet (24ms)</span>
+            </div>
+          </div>
+          <div
+            class="chart-plot"
+            role="img"
+            aria-label="Gráfico de latência dos últimos 15 minutos. Linha verde Gateway estável perto de 12 milissegundos. Linha âmbar Internet perto de 24 milissegundos com picos. Marcadores: Congelamento, Instabilidade Wi-Fi e Queda de Pacote."
+          >
+            <svg class="chart-lines" viewBox="0 0 700 150" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+              <polyline points="0,90 100,95 190,84 270,91 350,42 410,88 520,92 700,91" fill="none" stroke="var(--color-warning)" stroke-width="2"/>
+              <polyline points="0,110 120,112 220,106 330,113 450,108 570,111 700,109" fill="none" stroke="var(--color-success)" stroke-width="2"/>
+            </svg>
+            <div class="event-marker" style="left:17%">
+              <span class="event-marker__label">Congelamento</span>
+            </div>
+            <div class="event-marker event-marker--warning" style="left:40%">
+              <span class="event-marker__label">Instabilidade Wi-Fi</span>
+            </div>
+            <div class="event-marker" style="left:63%">
+              <span class="event-marker__label">Queda de Pacote</span>
+            </div>
+          </div>
+        </div>
+
+        <aside class="card tracepoint-card">
+          <h2 class="tracepoint-card__title">
+            <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-shield"/></svg>
+            Entenda os TracePoints locais
+          </h2>
+          <p class="tracepoint-card__body">
+            Ao clicar em <strong>“Travou agora”</strong>, criamos um TracePoint contendo o histórico de rede de
+            <strong>5 minutos antes e 5 minutos depois</strong> da travada. Isso preserva as estatísticas de telemetria local e descarta dados externos indesejados.
+          </p>
+          <div class="tracepoint-card__footer">
+            <p class="tracepoint-card__status">Sensores: 1/6 Ativo | Coletor Local: OK</p>
+            <button type="button" class="button-secondary">Criar TracePoint</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="trace" class="screen" aria-labelledby="trace-title" hidden>
+      <div class="title"><h1 id="trace-title">TracePoints</h1><p>Incidentes automáticos e eventos marcados manualmente.</p></div>
+      <div class="filters filter-bar" role="toolbar" aria-label="Filtros de TracePoints">
+        <button type="button" class="filter filter-button on" aria-pressed="true">Todos</button>
+        <button type="button" class="filter filter-button" aria-pressed="false">Automáticos</button>
+        <button type="button" class="filter filter-button" aria-pressed="false">Manuais</button>
+        <button type="button" class="filter filter-button" aria-pressed="false">Últimos 7 dias</button>
+      </div>
+      <div class="events event-list">
+        <article class="event event-row"><time>Hoje 14:18</time><span class="chip badge">AUTOMÁTICO</span><p><span class="event-row__title">Instabilidade no Wi‑Fi</span><br>Jitter elevado por 34 segundos; gateway afetado.</p><span class="sev event-row__action">Severidade: Moderado</span></article>
+        <article class="event event-row"><time>Hoje 11:42</time><span class="chip badge">MANUAL</span><p><span class="event-row__title">Travada marcada</span><br>Rede estável; CPU em 96% durante o evento.</p><span class="event-row__action">Ver detalhe</span></article>
+        <article class="event event-row"><time>Ontem 22:07</time><span class="chip badge">AUTOMÁTICO</span><p><span class="event-row__title">Perda na rota externa</span><br>Gateway normal; dois destinos públicos degradados.</p><span class="sev event-row__action">Severidade: Alto</span></article>
+        <article class="event event-row"><time>Ontem 18:31</time><span class="chip badge">AUTOMÁTICO</span><p><span class="event-row__title">Pico breve sem impacto</span><br>42 ms por 2 segundos; evento não confirmado.</p><span class="event-row__action">Severidade: Baixo</span></article>
+      </div>
+    </section>
+
+    <section id="tecnico" class="screen" aria-labelledby="tecnico-title" hidden>
+      <div class="title"><h1 id="tecnico-title">Visão técnica</h1><p>Métricas brutas e agregadas da rede e do sistema.</p></div>
+      <div class="metrics metrics-grid">
+        <div class="metric metric-card"><small>Gateway</small><b>12 ms</b></div>
+        <div class="metric metric-card"><small>Internet</small><b>24 ms</b></div>
+        <div class="metric metric-card"><small>Jitter</small><b>3 ms</b></div>
+        <div class="metric metric-card"><small>Perda</small><b>0.0%</b></div>
+      </div>
+      <div class="charts technical-grid">
+        <div class="box panel card chart-card">
+          <div class="chart-card__header">
+            <h2 class="chart-card__title">Latência · Gateway / Internet</h2>
+            <div class="chart-legend" aria-hidden="true">
+              <span class="chart-legend__item"><span class="chart-legend__swatch" style="background:var(--color-danger)"></span>Gateway</span>
+              <span class="chart-legend__item"><span class="chart-legend__swatch chart-legend__swatch--internet"></span>Internet</span>
+            </div>
+          </div>
+          <div class="chart-plot" role="img" aria-label="Gráfico de latência Gateway e Internet com pico no gateway.">
+            <svg class="chart-lines" viewBox="0 0 700 150" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+              <polyline points="0,104 100,98 180,110 270,45 330,102 440,96 550,108 700,100" fill="none" stroke="var(--color-danger)" stroke-width="2"/>
+              <polyline points="0,120 130,118 260,115 390,122 520,117 700,119" fill="none" stroke="var(--color-warning)" stroke-width="2"/>
+            </svg>
+          </div>
+        </div>
+        <div class="box panel card chart-card">
+          <div class="chart-card__header">
+            <h2 class="chart-card__title">Recursos do sistema · CPU / RAM</h2>
+            <div class="chart-legend" aria-hidden="true">
+              <span class="chart-legend__item"><span class="chart-legend__swatch chart-legend__swatch--gateway"></span>CPU</span>
+              <span class="chart-legend__item"><span class="chart-legend__swatch" style="background:var(--color-muted)"></span>RAM</span>
+            </div>
+          </div>
+          <div class="chart-plot" role="img" aria-label="Gráfico de uso de CPU e RAM do sistema.">
+            <svg class="chart-lines" viewBox="0 0 700 150" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+              <polyline points="0,90 90,80 180,94 260,70 340,86 440,76 540,90 700,82" fill="none" stroke="var(--color-success)" stroke-width="2"/>
+              <polyline points="0,110 100,108 200,105 300,104 400,100 500,102 600,98 700,100" fill="none" stroke="var(--color-muted)" stroke-width="2"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="config" class="screen" aria-labelledby="config-title" hidden>
+      <div class="title"><h1 id="config-title">Configurações</h1><p>Controle coleta, destinos, retenção e inicialização.</p></div>
+      <div class="box card settings settings-layout">
+        <aside class="settings-menu settings-nav" aria-label="Seções de configuração">
+          <button type="button" class="on" aria-current="true">Coleta</button>
+          <button type="button">Alvos</button>
+          <button type="button">Armazenamento</button>
+          <button type="button">Inicialização</button>
+          <button type="button">Privacidade</button>
+        </aside>
+        <div class="form form-section">
+          <div class="group">
+            <h3>Monitoramento de rede</h3>
+            <p>Frequências padrão equilibram precisão e consumo.</p>
+            <label class="field field-row"><span>Gateway</span><select aria-label="Frequência Gateway"><option>A cada 1 segundo</option></select></label>
+            <label class="field field-row"><span>Internet</span><select aria-label="Frequência Internet"><option>A cada 2 segundos</option></select></label>
+            <label class="field field-row"><span>DNS sintético</span><select aria-label="Frequência DNS sintético"><option>A cada 30 segundos</option></select></label>
+          </div>
+          <div class="group">
+            <h3>Execução contínua</h3>
+            <p>O coletor continua ativo quando a janela é fechada.</p>
+            <label class="field field-row"><span>Iniciar com o Windows</span><input class="switch toggle" type="checkbox" checked aria-label="Iniciar com o Windows"></label>
+            <label class="field field-row"><span>Reduzir coleta em bateria</span><input class="switch toggle" type="checkbox" checked aria-label="Reduzir coleta em bateria"></label>
+          </div>
+          <button type="button" class="primary button">Salvar alterações</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="exportar" class="screen" aria-labelledby="exportar-title" hidden>
+      <div class="title"><h1 id="exportar-title">Exportar diagnóstico</h1><p>Gere um snapshot local anonimizado para análise ou suporte.</p></div>
+      <div class="export export-grid">
+        <div class="box panel card checks">
+          <h2>Conteúdo da exportação</h2>
+          <label class="check-option"><input type="checkbox" checked> Métricas de rede e agregados</label>
+          <label class="check-option"><input type="checkbox" checked> TracePoints e evidências</label>
+          <label class="check-option"><input type="checkbox" checked> Capabilities e versão do aplicativo</label>
+          <label class="check-option"><input type="checkbox"> Métricas detalhadas do sistema</label>
+          <div class="group">
+            <h3>Período</h3>
+            <select class="filter" aria-label="Período da exportação"><option>Últimas 24 horas</option><option>Últimos 7 dias</option></select>
+          </div>
+          <button type="button" class="primary button">Escolher destino e exportar</button>
+        </div>
+        <aside class="box preview card">
+          <h2>Prévia anonimizada</h2>
+          <pre class="code-preview"><code>{
   "period": "24h",
   "networkSamples": 8421,
   "tracePoints": 3,
@@ -136,18 +459,56 @@ button { cursor: pointer; }
   "ssid": "removed",
   "interfaceName": "removed",
   "privacy": "anonymized"
-}</code><p class="note">Hosts, IPs, SSID, MAC e caminhos locais são removidos por padrão.</p></aside></div></section>
-</main></div><script>
-document.querySelectorAll('.nav').forEach((button) => {
-  button.addEventListener('click', () => {
-    document.querySelectorAll('.nav').forEach((item) => {
-      item.classList.remove('active');
-      item.removeAttribute('aria-current');
+}</code></pre>
+          <p class="privacy-note">
+            <svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-shield"/></svg>
+            <span>Hosts, IPs, SSID, MAC e caminhos locais são removidos por padrão.</span>
+          </p>
+        </aside>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function () {
+  const navItems = [...document.querySelectorAll("[data-screen]")];
+  const screens = [...document.querySelectorAll(".screen")];
+
+  function activateScreen(screenId) {
+    if (!screenId) return;
+    navItems.forEach((item) => {
+      const active = item.dataset.screen === screenId;
+      item.classList.toggle("active", active);
+      item.classList.toggle("is-active", active);
+      if (active) item.setAttribute("aria-current", "page");
+      else item.removeAttribute("aria-current");
     });
-    document.querySelectorAll('.screen').forEach((screen) => screen.classList.remove('active'));
-    button.classList.add('active');
-    button.setAttribute('aria-current', 'page');
-    document.getElementById(button.dataset.screen).classList.add('active');
+    screens.forEach((screen) => {
+      const active = screen.id === screenId;
+      screen.classList.toggle("active", active);
+      screen.classList.toggle("is-active", active);
+      screen.hidden = !active;
+    });
+  }
+
+  navItems.forEach((item) => {
+    item.addEventListener("click", () => activateScreen(item.dataset.screen));
   });
-});
-</script></body></html>
+
+  document.querySelectorAll(".filter-bar .filter-button").forEach((button) => {
+    button.addEventListener("click", () => {
+      const bar = button.closest(".filter-bar");
+      bar.querySelectorAll(".filter-button").forEach((item) => {
+        const on = item === button;
+        item.classList.toggle("on", on);
+        item.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+    });
+  });
+
+  activateScreen("inicio");
+})();
+</script>
+</body>
+</html>
