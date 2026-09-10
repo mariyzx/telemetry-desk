@@ -108,4 +108,55 @@ describe('CreateManualTracePointService', () => {
     });
     expect(result.evidence.some((item) => item.type === 'gateway_drop')).toBe(true);
   });
+
+  it('diagnoses isp_or_external_route when gateway is healthy and both publics are bad', async () => {
+    const clock: Clock = {
+      nowEpochMs: () => nowEpochMs,
+      monotonicMs: () => 42,
+    };
+    const repository = createRepo();
+    let idSeq = 0;
+    const service = new CreateManualTracePointService({
+      clock,
+      repository,
+      createId: () => `id-${++idSeq}`,
+    });
+
+    const internetSample = (host: string, offsetMs: number, ok: boolean): NetworkSample => ({
+      id: `i-${host}-${offsetMs}`,
+      observedAtEpochMs: nowEpochMs + offsetMs,
+      targetRole: 'internet',
+      targetHost: host,
+      interfaceId: null,
+      latencyMs: ok ? 20 : null,
+      jitterMs: null,
+      sent: 1,
+      received: ok ? 1 : 0,
+      lossRatio: ok ? 0 : 1,
+      quality: ok ? 'ok' : 'timeout',
+      errorCode: ok ? null : 'timeout',
+    });
+
+    const samples = [
+      gatewaySample(-2000, true),
+      gatewaySample(-1000, true),
+      gatewaySample(0, true),
+      internetSample('1.1.1.1', -3000, true),
+      internetSample('1.1.1.1', -2000, false),
+      internetSample('1.1.1.1', -1000, false),
+      internetSample('1.1.1.1', 0, false),
+      internetSample('8.8.8.8', -3000, true),
+      internetSample('8.8.8.8', -2000, false),
+      internetSample('8.8.8.8', -1000, false),
+      internetSample('8.8.8.8', 0, false),
+    ];
+
+    const result = await service.execute(samples);
+
+    expect(result).toMatchObject({
+      cause: 'isp_or_external_route',
+      confidence: 0.6,
+      explanationCode: 'diag_isp_or_external_route_publics_degraded',
+    });
+  });
 });

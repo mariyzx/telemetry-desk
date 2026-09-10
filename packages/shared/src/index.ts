@@ -29,6 +29,16 @@ export type {
   GatewayStatusResponse,
 } from './contracts/gateway-status.contract.js';
 export {
+  internetStatusDataSchema,
+  internetStatusRequestSchema,
+  internetStatusResponseSchema,
+  internetTargetStatusSchema,
+} from './contracts/internet-status.contract.js';
+export type {
+  InternetStatusRequest,
+  InternetStatusResponse,
+} from './contracts/internet-status.contract.js';
+export {
   createManualTracePointIpcResponseSchema,
   createManualTracePointRequestSchema,
   createManualTracePointResponseSchema,

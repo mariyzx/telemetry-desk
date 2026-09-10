@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const COLLECTOR_COMMANDS = {
   getGatewayStatus: 'collector:get-gateway-status',
+  getInternetStatus: 'collector:get-internet-status',
   createManualTracePoint: 'collector:create-manual-trace-point',
   listTracePoints: 'collector:list-trace-points',
   shutdown: 'collector:shutdown',
@@ -13,6 +14,7 @@ export const COLLECTOR_EVENTS = {
 
 const collectorCommandValues = [
   COLLECTOR_COMMANDS.getGatewayStatus,
+  COLLECTOR_COMMANDS.getInternetStatus,
   COLLECTOR_COMMANDS.createManualTracePoint,
   COLLECTOR_COMMANDS.listTracePoints,
   COLLECTOR_COMMANDS.shutdown,

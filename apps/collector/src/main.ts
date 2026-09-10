@@ -1,11 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import {
   CachedGetGatewayStatusService,
+  CachedGetInternetStatusService,
   CreateManualTracePointService,
   DetectAutomaticTracePointsService,
   FinalizeOpenTracePointsService,
   GatewaySamplePipeline,
   GetGatewayStatusService,
+  GetInternetStatusService,
+  InternetSamplePipeline,
   ListRecentTracePointsService,
   NetworkSamplePersistenceQueue,
   type NetworkSample,
@@ -34,6 +37,8 @@ const gatewayProbe = new GetGatewayStatusService(
   networkPorts.networkProbe,
 );
 const gatewayStatusService = new CachedGetGatewayStatusService(gatewayProbe);
+const internetProbe = new GetInternetStatusService(clock, networkPorts.networkProbe);
+const internetStatusService = new CachedGetInternetStatusService(internetProbe);
 
 const dbPath = resolveDatabasePath();
 const database = openSqliteDatabase(dbPath);
@@ -46,12 +51,18 @@ const samplePipeline = new GatewaySamplePipeline({
   queue: persistenceQueue,
   createId: () => randomUUID(),
 });
+const internetSamplePipeline = new InternetSamplePipeline({
+  buffer: ringBuffer,
+  queue: persistenceQueue,
+  createId: () => randomUUID(),
+});
 
 const createManualTracePointService = new CreateManualTracePointService({
   clock,
   repository: tracePointRepository,
   createId: () => randomUUID(),
   flushPendingSamples: () => samplePipeline.flush(),
+  internetHosts: internetStatusService.hosts,
 });
 const listRecentTracePointsService = new ListRecentTracePointsService(tracePointRepository);
 const finalizeOpenTracePointsService = new FinalizeOpenTracePointsService(
@@ -62,6 +73,7 @@ const detectAutomaticTracePointsService = new DetectAutomaticTracePointsService(
   clock,
   repository: tracePointRepository,
   createId: () => randomUUID(),
+  internetHosts: internetStatusService.hosts,
 });
 
 let stopping = false;
@@ -85,8 +97,13 @@ const stop = runCollector({
   stdout: process.stdout,
   clock,
   gatewayStatus: gatewayStatusService,
+  internetStatus: internetStatusService,
   onGatewaySample: async (status) => {
     samplePipeline.record(status);
+    await detectAutomaticTracePointsService.execute(ringBuffer.toArray());
+  },
+  onInternetSample: async (sample) => {
+    internetSamplePipeline.record(sample);
     await detectAutomaticTracePointsService.execute(ringBuffer.toArray());
   },
   persistenceFlush: () => samplePipeline.flush(),

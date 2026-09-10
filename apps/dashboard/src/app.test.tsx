@@ -21,6 +21,44 @@ function runtimeReady() {
   };
 }
 
+function internetReady() {
+  return {
+    correlationId: crypto.randomUUID(),
+    data: {
+      primary: {
+        host: '1.1.1.1',
+        latencyMs: 16,
+        quality: 'ok' as const,
+        observedAtEpochMs: 1700000000000,
+        monotonicMs: 42,
+      },
+      secondary: {
+        host: '8.8.8.8',
+        latencyMs: 22,
+        quality: 'ok' as const,
+        observedAtEpochMs: 1700000001000,
+        monotonicMs: 1042,
+      },
+      observedAtEpochMs: 1700000001000,
+      monotonicMs: 1042,
+    },
+  };
+}
+
+function gatewayReady(overrides: Record<string, unknown> = {}) {
+  return {
+    correlationId: crypto.randomUUID(),
+    data: {
+      gatewayHost: '192.168.1.1',
+      latencyMs: 12,
+      quality: 'ok' as const,
+      observedAtEpochMs: 1700000000000,
+      monotonicMs: 42,
+      ...overrides,
+    },
+  };
+}
+
 beforeEach(() => {
   vi.useFakeTimers();
 });
@@ -39,19 +77,11 @@ async function flushEffects(): Promise<void> {
   });
 }
 
-it('shows ready status, capability count and gateway probe', async () => {
+it('shows ready status, capability count, gateway and internet probes', async () => {
   window.telemetryDesk = {
     getRuntimeStatus: vi.fn().mockResolvedValue(runtimeReady()),
-    getGatewayStatus: vi.fn().mockResolvedValue({
-      correlationId: crypto.randomUUID(),
-      data: {
-        gatewayHost: '192.168.1.1',
-        latencyMs: 12,
-        quality: 'ok',
-        observedAtEpochMs: 1700000000000,
-        monotonicMs: 42,
-      },
-    }),
+    getGatewayStatus: vi.fn().mockResolvedValue(gatewayReady()),
+    getInternetStatus: vi.fn().mockResolvedValue(internetReady()),
     createManualTracePoint: vi.fn(),
     listTracePoints: vi.fn().mockResolvedValue({
       correlationId: crypto.randomUUID(),
@@ -71,6 +101,9 @@ it('shows ready status, capability count and gateway probe', async () => {
   expect(screen.getByText('Host: 192.168.1.1')).toBeInTheDocument();
   expect(screen.getByText('Latência: 12 ms')).toBeInTheDocument();
   expect(screen.getByText('Qualidade: Bom')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Internet' })).toBeInTheDocument();
+  expect(screen.getByText('Primário (1.1.1.1): 16 ms · Bom')).toBeInTheDocument();
+  expect(screen.getByText('Secundário (8.8.8.8): 22 ms · Bom')).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'TracePoints recentes' })).toBeInTheDocument();
   expect(
     screen.getByText('Nenhum TracePoint ainda. Use "Travou agora" no tray.'),
@@ -80,16 +113,8 @@ it('shows ready status, capability count and gateway probe', async () => {
 it('shows a recent manual TracePoint in the list', async () => {
   window.telemetryDesk = {
     getRuntimeStatus: vi.fn().mockResolvedValue(runtimeReady()),
-    getGatewayStatus: vi.fn().mockResolvedValue({
-      correlationId: crypto.randomUUID(),
-      data: {
-        gatewayHost: '192.168.1.1',
-        latencyMs: 12,
-        quality: 'ok',
-        observedAtEpochMs: 1700000000000,
-        monotonicMs: 42,
-      },
-    }),
+    getGatewayStatus: vi.fn().mockResolvedValue(gatewayReady()),
+    getInternetStatus: vi.fn().mockResolvedValue(internetReady()),
     createManualTracePoint: vi.fn(),
     listTracePoints: vi.fn().mockResolvedValue({
       correlationId: crypto.randomUUID(),
@@ -130,16 +155,14 @@ it('shows a recent manual TracePoint in the list', async () => {
 it('shows gateway typed error without leaking internals', async () => {
   window.telemetryDesk = {
     getRuntimeStatus: vi.fn().mockResolvedValue(runtimeReady()),
-    getGatewayStatus: vi.fn().mockResolvedValue({
-      correlationId: crypto.randomUUID(),
-      data: {
+    getGatewayStatus: vi.fn().mockResolvedValue(
+      gatewayReady({
         gatewayHost: '10.0.0.1',
         latencyMs: null,
         quality: 'timeout',
-        observedAtEpochMs: 1700000000000,
-        monotonicMs: 42,
-      },
-    }),
+      }),
+    ),
+    getInternetStatus: vi.fn().mockResolvedValue(internetReady()),
     createManualTracePoint: vi.fn(),
     listTracePoints: vi.fn().mockResolvedValue({
       correlationId: crypto.randomUUID(),
@@ -157,16 +180,14 @@ it('shows gateway typed error without leaking internals', async () => {
 it('shows an error without leaking details', async () => {
   window.telemetryDesk = {
     getRuntimeStatus: vi.fn().mockRejectedValue(new Error('secret')),
-    getGatewayStatus: vi.fn().mockResolvedValue({
-      correlationId: crypto.randomUUID(),
-      data: {
+    getGatewayStatus: vi.fn().mockResolvedValue(
+      gatewayReady({
         gatewayHost: null,
         latencyMs: null,
         quality: 'unavailable',
-        observedAtEpochMs: 1700000000000,
-        monotonicMs: 42,
-      },
-    }),
+      }),
+    ),
+    getInternetStatus: vi.fn().mockResolvedValue(internetReady()),
     createManualTracePoint: vi.fn(),
     listTracePoints: vi.fn().mockResolvedValue({
       correlationId: crypto.randomUUID(),
@@ -186,26 +207,15 @@ it('updates gateway latency when a later poll returns a new value', async () => 
     getRuntimeStatus: vi.fn().mockResolvedValue(runtimeReady()),
     getGatewayStatus: vi
       .fn()
-      .mockResolvedValueOnce({
-        correlationId: crypto.randomUUID(),
-        data: {
-          gatewayHost: '192.168.1.1',
-          latencyMs: 12,
-          quality: 'ok',
-          observedAtEpochMs: 1700000000000,
-          monotonicMs: 42,
-        },
-      })
-      .mockResolvedValueOnce({
-        correlationId: crypto.randomUUID(),
-        data: {
-          gatewayHost: '192.168.1.1',
+      .mockResolvedValueOnce(gatewayReady({ latencyMs: 12 }))
+      .mockResolvedValueOnce(
+        gatewayReady({
           latencyMs: 48,
-          quality: 'ok',
           observedAtEpochMs: 1700000001000,
           monotonicMs: 1042,
-        },
-      }),
+        }),
+      ),
+    getInternetStatus: vi.fn().mockResolvedValue(internetReady()),
     createManualTracePoint: vi.fn(),
     listTracePoints: vi.fn().mockResolvedValue({
       correlationId: crypto.randomUUID(),

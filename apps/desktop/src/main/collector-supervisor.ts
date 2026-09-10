@@ -7,10 +7,15 @@ import {
   COLLECTOR_COMMANDS,
   createManualTracePointResponseSchema,
   gatewayStatusDataSchema,
+  internetStatusDataSchema,
   listTracePointsResponseSchema,
   type TracePointSummary,
 } from '@telemetry-desk/shared';
-import type { GatewayStatus } from '@telemetry-desk/application';
+import type { GatewayStatus, InternetStatus } from '@telemetry-desk/application';
+import {
+  DEFAULT_INTERNET_PRIMARY_HOST,
+  DEFAULT_INTERNET_SECONDARY_HOST,
+} from '@telemetry-desk/application';
 
 export type CollectorHealth = 'starting' | 'healthy' | 'restarting' | 'degraded' | 'stopped';
 
@@ -47,6 +52,7 @@ export interface CollectorSupervisor {
   start: () => Promise<void>;
   stop: () => Promise<void>;
   getGatewayStatus: () => Promise<GatewayStatus>;
+  getInternetStatus: () => Promise<InternetStatus>;
   createManualTracePoint: () => Promise<TracePointSummary>;
   listTracePoints: (limit?: number) => Promise<TracePointSummary[]>;
 }
@@ -265,6 +271,19 @@ export function createCollectorSupervisor(
       }
     },
 
+    getInternetStatus: async () => {
+      if (health === 'degraded' || health === 'stopped' || !active) {
+        return unavailableInternetStatus(options.clock);
+      }
+
+      try {
+        const payload = await active.client.request(COLLECTOR_COMMANDS.getInternetStatus, {});
+        return internetStatusDataSchema.parse(payload);
+      } catch {
+        return unavailableInternetStatus(options.clock);
+      }
+    },
+
     createManualTracePoint: async () => {
       if (health === 'degraded' || health === 'stopped' || !active) {
         throw new Error('collector unavailable');
@@ -296,6 +315,23 @@ function unavailableGatewayStatus(clock: CollectorSupervisorClock): GatewayStatu
     quality: 'unavailable',
     observedAtEpochMs: clock.nowEpochMs(),
     monotonicMs: clock.monotonicMs(),
+  };
+}
+
+function unavailableInternetStatus(clock: CollectorSupervisorClock): InternetStatus {
+  const observedAtEpochMs = clock.nowEpochMs();
+  const monotonicMs = clock.monotonicMs();
+  const unavailable = {
+    latencyMs: null,
+    quality: 'unavailable' as const,
+    observedAtEpochMs,
+    monotonicMs,
+  };
+  return {
+    primary: { host: DEFAULT_INTERNET_PRIMARY_HOST, ...unavailable },
+    secondary: { host: DEFAULT_INTERNET_SECONDARY_HOST, ...unavailable },
+    observedAtEpochMs,
+    monotonicMs,
   };
 }
 

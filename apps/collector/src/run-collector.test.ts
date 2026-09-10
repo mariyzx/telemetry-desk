@@ -187,6 +187,135 @@ describe('runCollector', () => {
   });
 });
 
+describe('runCollector internet sampling', () => {
+  it('alternates public probes on a ~1s cadence and serves get-internet-status from cache', async () => {
+    const pipe = createMemoryStdio();
+    const clock = { nowEpochMs: () => 1_700_000_000_000, monotonicMs: () => monotonic };
+    let monotonic = 0;
+    const timers = new Map<number, { due: number; fn: () => void }>();
+    let nextTimerId = 1;
+
+    const probedPrimary = {
+      host: '1.1.1.1',
+      latencyMs: 10,
+      quality: 'ok' as const,
+      observedAtEpochMs: 1_700_000_000_000,
+      monotonicMs: 0,
+    };
+    const probedSecondary = {
+      host: '8.8.8.8',
+      latencyMs: 14,
+      quality: 'ok' as const,
+      observedAtEpochMs: 1_700_000_001_000,
+      monotonicMs: 1_000,
+    };
+
+    const sample = vi
+      .fn()
+      .mockResolvedValueOnce({
+        probed: probedPrimary,
+        status: {
+          primary: probedPrimary,
+          secondary: {
+            host: '8.8.8.8',
+            latencyMs: null,
+            quality: 'unavailable' as const,
+            observedAtEpochMs: 0,
+            monotonicMs: 0,
+          },
+          observedAtEpochMs: probedPrimary.observedAtEpochMs,
+          monotonicMs: probedPrimary.monotonicMs,
+        },
+      })
+      .mockResolvedValueOnce({
+        probed: probedSecondary,
+        status: {
+          primary: probedPrimary,
+          secondary: probedSecondary,
+          observedAtEpochMs: probedSecondary.observedAtEpochMs,
+          monotonicMs: probedSecondary.monotonicMs,
+        },
+      });
+
+    const execute = vi.fn().mockResolvedValue({
+      primary: probedPrimary,
+      secondary: probedSecondary,
+      observedAtEpochMs: probedSecondary.observedAtEpochMs,
+      monotonicMs: probedSecondary.monotonicMs,
+    });
+
+    const onInternetSample = vi.fn();
+
+    const stop = runCollector({
+      stdin: pipe.parentToChild as unknown as Readable,
+      stdout: pipe.childToParent as unknown as Writable,
+      clock,
+      gatewayStatus: {
+        execute: async () => ({
+          gatewayHost: null,
+          latencyMs: null,
+          quality: 'unavailable',
+          observedAtEpochMs: 1,
+          monotonicMs: 1,
+        }),
+      },
+      internetStatus: { execute, sample },
+      onInternetSample,
+      internetSampleIntervalMs: 1_000,
+      heartbeatIntervalMs: 60_000,
+      setIntervalFn: () => 99,
+      clearIntervalFn: () => undefined,
+      setTimeoutFn: (fn, ms) => {
+        const id = nextTimerId++;
+        timers.set(id, { due: monotonic + ms, fn });
+        return id;
+      },
+      clearTimeoutFn: (id) => {
+        timers.delete(id);
+      },
+    });
+
+    await Promise.resolve();
+    expect(sample).toHaveBeenCalledTimes(1);
+    expect(onInternetSample).toHaveBeenCalledWith(probedPrimary);
+
+    const client = new CollectorProtocolClient({
+      write: (line) => pipe.parentToChild.write(line),
+      onLine: (listener) => {
+        pipe.childToParent.on('line', listener);
+      },
+      createId: () => '8bbf73d6-57ca-4fdd-9ce7-57bcd2404520',
+    });
+
+    await expect(client.request('collector:get-internet-status', {})).resolves.toMatchObject({
+      primary: { host: '1.1.1.1' },
+      secondary: { host: '8.8.8.8' },
+    });
+    expect(execute).toHaveBeenCalledTimes(1);
+
+    await advance(1_000);
+    expect(sample).toHaveBeenCalledTimes(2);
+    expect(onInternetSample).toHaveBeenCalledWith(probedSecondary);
+
+    stop();
+
+    async function advance(ms: number): Promise<void> {
+      const target = monotonic + ms;
+      while (true) {
+        const next = [...timers.entries()].sort((a, b) => a[1].due - b[1].due)[0];
+        if (!next || next[1].due > target) {
+          break;
+        }
+        timers.delete(next[0]);
+        monotonic = next[1].due;
+        next[1].fn();
+        await Promise.resolve();
+      }
+      monotonic = target;
+    }
+  });
+});
+
 function createMemoryStdio(): {
   parentToChild: MemoryStream;
   childToParent: MemoryStream;

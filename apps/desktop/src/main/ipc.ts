@@ -1,10 +1,16 @@
 import type { IpcMain } from 'electron';
-import type { GetGatewayStatusService, GetRuntimeStatusService } from '@telemetry-desk/application';
+import type {
+  GetGatewayStatusService,
+  GetRuntimeStatusService,
+  InternetStatus,
+} from '@telemetry-desk/application';
 import {
   createManualTracePointIpcResponseSchema,
   createManualTracePointRequestSchema,
   gatewayStatusRequestSchema,
   gatewayStatusResponseSchema,
+  internetStatusRequestSchema,
+  internetStatusResponseSchema,
   IPC_CHANNELS,
   listTracePointsRequestSchema,
   listTracePointsResponseSchema,
@@ -35,6 +41,20 @@ export function registerGatewayIpc(
     const request = gatewayStatusRequestSchema.parse(payload);
     const data = await service.execute();
     return gatewayStatusResponseSchema.parse({
+      correlationId: request.correlationId,
+      data,
+    });
+  });
+}
+
+export function registerInternetIpc(
+  ipcMain: Pick<IpcMain, 'handle'>,
+  service: { execute: () => Promise<InternetStatus> },
+): void {
+  ipcMain.handle(IPC_CHANNELS.internetStatus, async (_event, payload: unknown) => {
+    const request = internetStatusRequestSchema.parse(payload);
+    const data = await service.execute();
+    return internetStatusResponseSchema.parse({
       correlationId: request.correlationId,
       data,
     });

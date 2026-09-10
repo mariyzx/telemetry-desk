@@ -32,6 +32,7 @@ it('loads and polls recent TracePoints', async () => {
   window.telemetryDesk = {
     getRuntimeStatus: vi.fn(),
     getGatewayStatus: vi.fn(),
+    getInternetStatus: vi.fn(),
     createManualTracePoint: vi.fn(),
     listTracePoints: vi
       .fn()

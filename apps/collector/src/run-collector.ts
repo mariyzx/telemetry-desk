@@ -3,6 +3,8 @@ import {
   type Clock,
   type GatewayStatus,
   type GetGatewayStatusService,
+  type InternetStatus,
+  type InternetTargetSample,
   startMonotonicInterval,
 } from '@telemetry-desk/application';
 import { CollectorProtocolHost, decodeNdjsonChunk } from '@telemetry-desk/infrastructure';
@@ -14,6 +16,8 @@ import {
 } from '@telemetry-desk/shared';
 
 const DEFAULT_GATEWAY_SAMPLE_INTERVAL_MS = 1_000;
+/** Alternating public targets: each host every 2s → effective internet coverage ~1s. */
+const DEFAULT_INTERNET_SAMPLE_INTERVAL_MS = 1_000;
 const DEFAULT_PERSISTENCE_FLUSH_INTERVAL_MS = 2_000;
 const DEFAULT_TRACE_POINT_FINALIZE_INTERVAL_MS = 5_000;
 
@@ -24,13 +28,19 @@ export interface RunCollectorOptions {
   gatewayStatus: Pick<GetGatewayStatusService, 'execute'> & {
     sample?: () => Promise<GatewayStatus>;
   };
+  internetStatus?: {
+    execute: () => Promise<InternetStatus>;
+    sample?: () => Promise<{ probed: InternetTargetSample; status: InternetStatus }>;
+  };
   onGatewaySample?: (status: GatewayStatus) => void | Promise<void>;
+  onInternetSample?: (sample: InternetTargetSample) => void | Promise<void>;
   persistenceFlush?: () => void | Promise<void>;
   createManualTracePoint?: () => Promise<TracePointSummary>;
   listTracePoints?: (limit: number) => Promise<TracePointSummary[]>;
   finalizeOpenTracePoints?: () => void | Promise<void>;
   heartbeatIntervalMs?: number;
   gatewaySampleIntervalMs?: number;
+  internetSampleIntervalMs?: number;
   persistenceFlushIntervalMs?: number;
   tracePointFinalizeIntervalMs?: number;
   setIntervalFn?: (fn: () => void, ms: number) => number;
@@ -44,6 +54,8 @@ export function runCollector(options: RunCollectorOptions): () => void {
   const heartbeatIntervalMs = options.heartbeatIntervalMs ?? 5_000;
   const gatewaySampleIntervalMs =
     options.gatewaySampleIntervalMs ?? DEFAULT_GATEWAY_SAMPLE_INTERVAL_MS;
+  const internetSampleIntervalMs =
+    options.internetSampleIntervalMs ?? DEFAULT_INTERNET_SAMPLE_INTERVAL_MS;
   const persistenceFlushIntervalMs =
     options.persistenceFlushIntervalMs ?? DEFAULT_PERSISTENCE_FLUSH_INTERVAL_MS;
   const tracePointFinalizeIntervalMs =
@@ -53,7 +65,8 @@ export function runCollector(options: RunCollectorOptions): () => void {
   const clearIntervalFn =
     options.clearIntervalFn ?? ((id) => clearInterval(id as unknown as NodeJS.Timeout));
   const setTimeoutFn =
-    options.setTimeoutFn ?? ((fn, ms) => setTimeout(fn, ms) as unknown as number);
+    options.setTimeoutFn ??
+    ((fn: () => void, ms: number) => setTimeout(fn, ms) as unknown as number);
   const clearTimeoutFn =
     options.clearTimeoutFn ?? ((id) => clearTimeout(id as unknown as NodeJS.Timeout));
 
@@ -70,6 +83,13 @@ export function runCollector(options: RunCollectorOptions): () => void {
   });
 
   host.setHandler(COLLECTOR_COMMANDS.getGatewayStatus, async () => options.gatewayStatus.execute());
+
+  if (options.internetStatus) {
+    host.setHandler(COLLECTOR_COMMANDS.getInternetStatus, async () =>
+      options.internetStatus!.execute(),
+    );
+  }
+
   host.setHandler(COLLECTOR_COMMANDS.shutdown, async () => {
     await options.onShutdown?.();
     return {};
@@ -129,6 +149,22 @@ export function runCollector(options: RunCollectorOptions): () => void {
         })
       : () => undefined;
 
+  const stopInternetSampling =
+    options.internetStatus && typeof options.internetStatus.sample === 'function'
+      ? startMonotonicInterval({
+          clock: options.clock,
+          intervalMs: internetSampleIntervalMs,
+          onTick: async () => {
+            const result = await options.internetStatus?.sample?.();
+            if (result !== undefined) {
+              await options.onInternetSample?.(result.probed);
+            }
+          },
+          setTimeoutFn,
+          clearTimeoutFn,
+        })
+      : () => undefined;
+
   const stopPersistenceFlush =
     typeof options.persistenceFlush === 'function'
       ? startMonotonicInterval({
@@ -159,6 +195,7 @@ export function runCollector(options: RunCollectorOptions): () => void {
 
   return () => {
     stopGatewaySampling();
+    stopInternetSampling();
     stopPersistenceFlush();
     stopTracePointFinalize();
     clearIntervalFn(heartbeatTimer);

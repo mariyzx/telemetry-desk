@@ -4,19 +4,25 @@ import {
   createManualTracePoint,
   detectGatewayTriggers,
   isGatewayDegraded,
-  unknownDiagnosisSignals,
   type DetectorSample,
   type TracePoint,
   type TracePointEvidence,
 } from '@telemetry-desk/domain';
 import type { Clock, NetworkSample } from '../ports/telemetry-ports.js';
 import type { TracePointRepository } from '../ports/trace-point-repository.js';
+import { buildDiagnosisSignals } from './build-diagnosis-signals.js';
+import {
+  DEFAULT_INTERNET_PRIMARY_HOST,
+  DEFAULT_INTERNET_SECONDARY_HOST,
+  type InternetTargetHosts,
+} from './get-internet-status.service.js';
 
 export interface CreateManualTracePointServiceDeps {
   clock: Clock;
   repository: TracePointRepository;
   createId: () => string;
   flushPendingSamples?: () => void | Promise<void>;
+  internetHosts?: InternetTargetHosts;
 }
 
 function toDetectorSamples(samples: readonly NetworkSample[]): DetectorSample[] {
@@ -31,7 +37,14 @@ function toDetectorSamples(samples: readonly NetworkSample[]): DetectorSample[] 
 }
 
 export class CreateManualTracePointService {
-  constructor(private readonly deps: CreateManualTracePointServiceDeps) {}
+  private readonly internetHosts: InternetTargetHosts;
+
+  constructor(private readonly deps: CreateManualTracePointServiceDeps) {
+    this.internetHosts = deps.internetHosts ?? {
+      primary: DEFAULT_INTERNET_PRIMARY_HOST,
+      secondary: DEFAULT_INTERNET_SECONDARY_HOST,
+    };
+  }
 
   async execute(samples: readonly NetworkSample[] = []): Promise<TracePoint> {
     await this.deps.flushPendingSamples?.();
@@ -47,9 +60,7 @@ export class CreateManualTracePointService {
     const detectorSamples = toDetectorSamples(samples);
     const gatewayDegraded = isGatewayDegraded(detectorSamples, triggeredAtEpochMs);
     const diagnosis = classifyTracePointDiagnosis(
-      unknownDiagnosisSignals({
-        gateway: gatewayDegraded ? 'bad' : 'unknown',
-      }),
+      buildDiagnosisSignals(samples, triggeredAtEpochMs, this.internetHosts),
     );
 
     if (gatewayDegraded) {

@@ -113,6 +113,29 @@ describe('CollectorSupervisor', () => {
     });
   });
 
+  it('forwards internet status to the healthy child', async () => {
+    const world = createFakeWorld();
+    const supervisor = createCollectorSupervisor({
+      spawn: world.spawn,
+      clock: world.clock,
+      setTimeoutFn: world.setTimeoutFn,
+      clearTimeoutFn: world.clearTimeoutFn,
+      createId: () => '8bbf73d6-57ca-4fdd-9ce7-57bcd2404520',
+      heartbeatTimeoutMs: 15_000,
+      backoffMs: [1_000],
+      maxRestartsBeforeDegraded: 3,
+      shutdownTimeoutMs: 1_000,
+    });
+
+    await supervisor.start();
+    world.emitHeartbeat(5);
+
+    await expect(supervisor.getInternetStatus()).resolves.toMatchObject({
+      primary: { host: '1.1.1.1', latencyMs: 16 },
+      secondary: { host: '8.8.8.8', latencyMs: 20 },
+    });
+  });
+
   it('sends shutdown on stop and kills when the child ignores it', async () => {
     const world = createFakeWorld({ ignoreShutdown: true });
     const supervisor = createCollectorSupervisor({
@@ -207,6 +230,25 @@ function createFakeWorld(options: FakeChildOptions = {}) {
       quality: 'ok' as const,
       observedAtEpochMs: 1_700_000_000_000,
       monotonicMs: 42,
+    }));
+
+    host.setHandler('collector:get-internet-status', async () => ({
+      primary: {
+        host: '1.1.1.1',
+        latencyMs: 16,
+        quality: 'ok' as const,
+        observedAtEpochMs: 1_700_000_000_000,
+        monotonicMs: 42,
+      },
+      secondary: {
+        host: '8.8.8.8',
+        latencyMs: 20,
+        quality: 'ok' as const,
+        observedAtEpochMs: 1_700_000_001_000,
+        monotonicMs: 1_042,
+      },
+      observedAtEpochMs: 1_700_000_001_000,
+      monotonicMs: 1_042,
     }));
 
     host.setHandler('collector:shutdown', async () => {

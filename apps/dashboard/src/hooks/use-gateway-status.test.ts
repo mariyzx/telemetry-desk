@@ -43,6 +43,7 @@ function stubDesktopApi(
   return {
     getRuntimeStatus: vi.fn(),
     getGatewayStatus: vi.fn(),
+    getInternetStatus: vi.fn(),
     createManualTracePoint: vi.fn(),
     listTracePoints: vi.fn().mockResolvedValue({
       correlationId: crypto.randomUUID(),

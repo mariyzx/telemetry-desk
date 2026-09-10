@@ -5,17 +5,23 @@ import {
   createAutomaticTracePoint,
   detectGatewayTriggers,
   TRACE_POINT_COOLDOWN_MS,
-  unknownDiagnosisSignals,
   type DetectorSample,
   type TracePoint,
 } from '@telemetry-desk/domain';
 import type { Clock, NetworkSample } from '../ports/telemetry-ports.js';
 import type { TracePointRepository } from '../ports/trace-point-repository.js';
+import { buildDiagnosisSignals } from './build-diagnosis-signals.js';
+import {
+  DEFAULT_INTERNET_PRIMARY_HOST,
+  DEFAULT_INTERNET_SECONDARY_HOST,
+  type InternetTargetHosts,
+} from './get-internet-status.service.js';
 
 export interface DetectAutomaticTracePointsServiceDeps {
   clock: Clock;
   repository: TracePointRepository;
   createId: () => string;
+  internetHosts?: InternetTargetHosts;
 }
 
 function toDetectorSamples(samples: readonly NetworkSample[]): DetectorSample[] {
@@ -50,27 +56,33 @@ function hasGatewayDegradationEvidence(tracePoint: TracePoint): boolean {
 function diagnoseConfirmedAutomatic(
   previous: TracePoint,
   next: TracePoint,
+  samples: readonly NetworkSample[],
+  nowEpochMs: number,
+  internetHosts: InternetTargetHosts,
   degraded: boolean,
 ): TracePoint {
   if (previous.state === 'confirmed' || next.state !== 'confirmed' || next.cause !== null) {
     return next;
   }
 
-  const gatewayBad = degraded || hasGatewayDegradationEvidence(next);
-  return applyTracePointDiagnosis(
-    next,
-    classifyTracePointDiagnosis(
-      unknownDiagnosisSignals({
-        gateway: gatewayBad ? 'bad' : 'unknown',
-      }),
-    ),
-  );
+  const signals = buildDiagnosisSignals(samples, nowEpochMs, internetHosts);
+  if (degraded || hasGatewayDegradationEvidence(next)) {
+    signals.gateway = 'bad';
+  }
+
+  return applyTracePointDiagnosis(next, classifyTracePointDiagnosis(signals));
 }
 
 export class DetectAutomaticTracePointsService {
   private readonly stableSinceById = new Map<string, number | null>();
+  private readonly internetHosts: InternetTargetHosts;
 
-  constructor(private readonly deps: DetectAutomaticTracePointsServiceDeps) {}
+  constructor(private readonly deps: DetectAutomaticTracePointsServiceDeps) {
+    this.internetHosts = deps.internetHosts ?? {
+      primary: DEFAULT_INTERNET_PRIMARY_HOST,
+      secondary: DEFAULT_INTERNET_SECONDARY_HOST,
+    };
+  }
 
   async execute(samples: readonly NetworkSample[]): Promise<TracePoint[]> {
     const nowEpochMs = this.deps.clock.nowEpochMs();
@@ -90,7 +102,14 @@ export class DetectAutomaticTracePointsService {
           stableSinceEpochMs: this.stableSinceById.get(current.id) ?? null,
         });
         this.stableSinceById.set(current.id, advanced.stableSinceEpochMs);
-        const diagnosed = diagnoseConfirmedAutomatic(current, advanced.tracePoint, degraded);
+        const diagnosed = diagnoseConfirmedAutomatic(
+          current,
+          advanced.tracePoint,
+          samples,
+          nowEpochMs,
+          this.internetHosts,
+          degraded,
+        );
         if (!sameTracePoint(current, diagnosed)) {
           await this.deps.repository.update(diagnosed);
         }

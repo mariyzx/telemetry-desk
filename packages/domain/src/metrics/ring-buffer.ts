@@ -34,5 +34,8 @@ export class RingBuffer<T> {
   }
 }
 
-/** Capacity for ~10 minutes of gateway samples at 1 sample/second. */
-export const GATEWAY_RING_BUFFER_CAPACITY = 10 * 60;
+/**
+ * Capacity for ~10 minutes of network samples at ~2/s
+ * (gateway 1/s + alternating internet coverage ~1/s).
+ */
+export const GATEWAY_RING_BUFFER_CAPACITY = 10 * 60 * 2;

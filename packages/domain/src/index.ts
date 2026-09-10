@@ -59,3 +59,4 @@ export {
   gatewayHealthFromDegraded,
   unknownDiagnosisSignals,
 } from './diagnostics/classify-trace-point-diagnosis.js';
+export { assessNetworkTargetHealth } from './diagnostics/assess-network-target-health.js';

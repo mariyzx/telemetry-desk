@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { RuntimeStatusResponse } from '@telemetry-desk/shared';
 import { TracePointDiagnosisBlock } from './components/trace-point-diagnosis.js';
 import { useGatewayStatus } from './hooks/use-gateway-status.js';
+import { useInternetStatus } from './hooks/use-internet-status.js';
 import { useTracePoints } from './hooks/use-trace-points.js';
 
 type RuntimeState =
@@ -9,7 +10,7 @@ type RuntimeState =
   | { kind: 'success'; data: RuntimeStatusResponse['data'] }
   | { kind: 'error' };
 
-type GatewayQuality = 'ok' | 'timeout' | 'permission_denied' | 'unsupported' | 'unavailable';
+type ProbeQuality = 'ok' | 'timeout' | 'permission_denied' | 'unsupported' | 'unavailable';
 type TracePointOrigin = 'manual' | 'automatic';
 type TracePointState = 'candidate' | 'observing' | 'confirmed' | 'recovering' | 'finalized';
 
@@ -19,7 +20,7 @@ function countEnabledCapabilities(
   return Object.values(capabilities).filter(Boolean).length;
 }
 
-function formatGatewayQuality(quality: GatewayQuality): string {
+function formatProbeQuality(quality: ProbeQuality): string {
   switch (quality) {
     case 'ok':
       return 'Bom';
@@ -32,6 +33,10 @@ function formatGatewayQuality(quality: GatewayQuality): string {
     case 'unavailable':
       return 'Indisponível';
   }
+}
+
+function formatLatency(latencyMs: number | null): string {
+  return latencyMs === null ? '—' : `${latencyMs} ms`;
 }
 
 function formatTracePointOrigin(origin: TracePointOrigin): string {
@@ -73,6 +78,7 @@ function formatTracePointSummary(item: {
 export function App() {
   const [runtime, setRuntime] = useState<RuntimeState>({ kind: 'loading' });
   const gateway = useGatewayStatus();
+  const internet = useInternetStatus();
   const tracePoints = useTracePoints();
 
   useEffect(() => {
@@ -102,7 +108,12 @@ export function App() {
     };
   }, []);
 
-  if (runtime.kind === 'loading' || gateway.kind === 'loading' || tracePoints.kind === 'loading') {
+  if (
+    runtime.kind === 'loading' ||
+    gateway.kind === 'loading' ||
+    internet.kind === 'loading' ||
+    tracePoints.kind === 'loading'
+  ) {
     return (
       <main>
         <p>Carregando status…</p>
@@ -110,7 +121,12 @@ export function App() {
     );
   }
 
-  if (runtime.kind === 'error' || gateway.kind === 'error' || tracePoints.kind === 'error') {
+  if (
+    runtime.kind === 'error' ||
+    gateway.kind === 'error' ||
+    internet.kind === 'error' ||
+    tracePoints.kind === 'error'
+  ) {
     return (
       <main>
         <p role="alert">Não foi possível obter o status local.</p>
@@ -119,7 +135,6 @@ export function App() {
   }
 
   const enabled = countEnabledCapabilities(runtime.data.capabilities);
-  const latencyLabel = gateway.data.latencyMs === null ? '—' : `${gateway.data.latencyMs} ms`;
 
   return (
     <main>
@@ -131,8 +146,20 @@ export function App() {
       <section aria-labelledby="gateway-heading">
         <h2 id="gateway-heading">Gateway</h2>
         <p>Host: {gateway.data.gatewayHost ?? 'indisponível'}</p>
-        <p>Latência: {latencyLabel}</p>
-        <p>Qualidade: {formatGatewayQuality(gateway.data.quality)}</p>
+        <p>Latência: {formatLatency(gateway.data.latencyMs)}</p>
+        <p>Qualidade: {formatProbeQuality(gateway.data.quality)}</p>
+      </section>
+      <section aria-labelledby="internet-heading">
+        <h2 id="internet-heading">Internet</h2>
+        <p>
+          Primário ({internet.data.primary.host}): {formatLatency(internet.data.primary.latencyMs)}{' '}
+          · {formatProbeQuality(internet.data.primary.quality)}
+        </p>
+        <p>
+          Secundário ({internet.data.secondary.host}):{' '}
+          {formatLatency(internet.data.secondary.latencyMs)} ·{' '}
+          {formatProbeQuality(internet.data.secondary.quality)}
+        </p>
       </section>
       <section aria-labelledby="trace-points-heading">
         <h2 id="trace-points-heading">TracePoints recentes</h2>

@@ -6,7 +6,12 @@ import { GetRuntimeStatusService } from '@telemetry-desk/application';
 import { SystemClock } from '@telemetry-desk/infrastructure';
 import { getPlatformCapabilities } from '@telemetry-desk/platform';
 import { createCollectorSupervisor } from './collector-supervisor.js';
-import { registerGatewayIpc, registerRuntimeIpc, registerTracePointIpc } from './ipc.js';
+import {
+  registerGatewayIpc,
+  registerInternetIpc,
+  registerRuntimeIpc,
+  registerTracePointIpc,
+} from './ipc.js';
 import { createAppLifecycle } from './lifecycle.js';
 import { resolveCollectorDatabasePath, spawnCollectorChild } from './spawn-collector.js';
 import { createAppTray } from './tray.js';
@@ -32,6 +37,9 @@ const collectorSupervisor = createCollectorSupervisor({
 registerRuntimeIpc(ipcMain, runtimeStatusService);
 registerGatewayIpc(ipcMain, {
   execute: () => collectorSupervisor.getGatewayStatus(),
+});
+registerInternetIpc(ipcMain, {
+  execute: () => collectorSupervisor.getInternetStatus(),
 });
 registerTracePointIpc(ipcMain, {
   createManual: () => collectorSupervisor.createManualTracePoint(),
