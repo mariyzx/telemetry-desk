@@ -1,5 +1,8 @@
+import type { TracePointSummary } from '@telemetry-desk/shared';
 import type { GatewayStatusState } from '../hooks/use-gateway-status.js';
 import type { InternetStatusState } from '../hooks/use-internet-status.js';
+import type { NetworkSampleSeriesState } from '../hooks/use-network-sample-series.js';
+import { NETWORK_SAMPLE_SERIES_WINDOW_MS } from '../hooks/use-network-sample-series.js';
 import type { RuntimeStatusState } from '../hooks/use-runtime-status.js';
 import {
   countEnabledCapabilities,
@@ -14,20 +17,61 @@ import {
   IconShield,
   IconWifi,
 } from './icons.js';
-import { PlaceholderNote } from './placeholder-note.js';
+import { LatencySeriesChart } from './latency-series-chart.js';
 
 export interface HomeSectionProps {
   runtime: RuntimeStatusState;
   gateway: GatewayStatusState;
   internet: InternetStatusState;
+  series: NetworkSampleSeriesState;
+  tracePoints: TracePointSummary[];
   onCreateTracePoint: () => void;
   createBusy: boolean;
+}
+
+function HistoryChart({
+  series,
+  markers,
+}: {
+  series: NetworkSampleSeriesState;
+  markers: Array<{ atEpochMs: number; label: string; tone?: 'default' | 'warning' }>;
+}) {
+  const windowEndEpochMs = Date.now();
+  const windowStartEpochMs = windowEndEpochMs - NETWORK_SAMPLE_SERIES_WINDOW_MS;
+
+  if (series.kind === 'loading') {
+    return <div className="chart-plot chart-plot--placeholder">Carregando histórico…</div>;
+  }
+
+  if (series.kind === 'error') {
+    return (
+      <div className="chart-plot chart-plot--placeholder">
+        <p role="alert">Não foi possível carregar o histórico contínuo.</p>
+      </div>
+    );
+  }
+
+  if (series.kind === 'empty') {
+    return <div className="chart-plot chart-plot--placeholder">Aguardando amostras…</div>;
+  }
+
+  return (
+    <LatencySeriesChart
+      points={series.points}
+      windowStartEpochMs={windowStartEpochMs}
+      windowEndEpochMs={windowEndEpochMs}
+      markers={markers}
+      ariaLabel="Gráfico de latência dos últimos 15 minutos, Gateway e Internet"
+    />
+  );
 }
 
 export function HomeSection({
   runtime,
   gateway,
   internet,
+  series,
+  tracePoints,
   onCreateTracePoint,
   createBusy,
 }: HomeSectionProps) {
@@ -49,6 +93,15 @@ export function HomeSection({
       : internet.kind === 'loading'
         ? 'Carregando…'
         : 'Indisponível';
+
+  const windowStartEpochMs = Date.now() - NETWORK_SAMPLE_SERIES_WINDOW_MS;
+  const markers = tracePoints
+    .filter((item) => item.triggeredAtEpochMs >= windowStartEpochMs)
+    .map((item) => ({
+      atEpochMs: item.triggeredAtEpochMs,
+      label: item.origin === 'manual' ? 'Manual' : 'Automático',
+      tone: (item.origin === 'automatic' ? 'warning' : 'default') as 'default' | 'warning',
+    }));
 
   return (
     <section className="screen is-active" aria-labelledby="inicio-title">
@@ -110,11 +163,7 @@ export function HomeSection({
           <div className="chart-card__header">
             <h2 className="chart-card__title">Histórico contínuo (Últimos 15 minutos)</h2>
           </div>
-          <div className="chart-plot chart-plot--placeholder" role="img" aria-label="Histórico contínuo indisponível">
-            <PlaceholderNote>
-              Histórico contínuo indisponível nesta versão — sem série temporal no bridge IPC.
-            </PlaceholderNote>
-          </div>
+          <HistoryChart series={series} markers={markers} />
         </div>
 
         <aside className="card tracepoint-card">

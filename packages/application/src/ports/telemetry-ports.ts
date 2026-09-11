@@ -81,4 +81,8 @@ export interface NetworkSample {
 
 export interface MetricRepository {
   appendNetworkSamples(samples: readonly NetworkSample[]): Promise<void>;
+  listNetworkSamplesSince(input: {
+    sinceEpochMs: number;
+    targetRoles: readonly NetworkTargetRole[];
+  }): Promise<NetworkSample[]>;
 }

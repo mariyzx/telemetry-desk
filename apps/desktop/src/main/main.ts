@@ -9,6 +9,7 @@ import { createCollectorSupervisor } from './collector-supervisor.js';
 import {
   registerGatewayIpc,
   registerInternetIpc,
+  registerNetworkSampleIpc,
   registerRuntimeIpc,
   registerTracePointIpc,
 } from './ipc.js';
@@ -44,6 +45,9 @@ registerInternetIpc(ipcMain, {
 registerTracePointIpc(ipcMain, {
   createManual: () => collectorSupervisor.createManualTracePoint(),
   listRecent: (limit) => collectorSupervisor.listTracePoints(limit),
+});
+registerNetworkSampleIpc(ipcMain, {
+  listRecent: (input) => collectorSupervisor.listNetworkSamples(input),
 });
 
 void app.whenReady().then(async () => {

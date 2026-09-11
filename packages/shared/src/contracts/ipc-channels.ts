@@ -4,4 +4,5 @@ export const IPC_CHANNELS = {
   internetStatus: 'internet:get-status',
   createManualTracePoint: 'trace-point:create-manual',
   listTracePoints: 'trace-point:list-recent',
+  listNetworkSamples: 'network-sample:list-recent',
 } as const;

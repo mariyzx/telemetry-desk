@@ -8,6 +8,7 @@ import { TracePointsSection } from './components/trace-points-section.js';
 import { useGatewayStatus } from './hooks/use-gateway-status.js';
 import { useInternetStatus } from './hooks/use-internet-status.js';
 import { useManualTracePoint } from './hooks/use-manual-trace-point.js';
+import { useNetworkSampleSeries } from './hooks/use-network-sample-series.js';
 import { useRuntimeStatus } from './hooks/use-runtime-status.js';
 import { useTracePoints } from './hooks/use-trace-points.js';
 import type { DashboardSection } from './lib/sections.js';
@@ -51,6 +52,7 @@ export function App() {
   const gateway = useGatewayStatus();
   const internet = useInternetStatus();
   const tracePoints = useTracePoints();
+  const series = useNetworkSampleSeries();
   const manual = useManualTracePoint();
 
   const lastUpdatedLabel = resolveLastUpdatedLabel({
@@ -91,6 +93,8 @@ export function App() {
           runtime={runtime}
           gateway={gateway}
           internet={internet}
+          series={series}
+          tracePoints={tracePoints.kind === 'success' ? tracePoints.items : []}
           onCreateTracePoint={() => {
             void manual.create();
           }}
@@ -99,7 +103,7 @@ export function App() {
       ) : null}
       {section === 'trace' ? <TracePointsSection tracePoints={tracePoints} /> : null}
       {section === 'tecnico' ? (
-        <TechnicalSection gateway={gateway} internet={internet} />
+        <TechnicalSection gateway={gateway} internet={internet} series={series} />
       ) : null}
       {section === 'config' ? <SettingsSection /> : null}
       {section === 'exportar' ? <ExportSection /> : null}

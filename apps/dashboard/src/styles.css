@@ -350,8 +350,8 @@ select:disabled {
 
 .chart-plot {
   position: relative;
-  flex: 1;
-  min-height: 140px;
+  flex: 1 1 auto;
+  min-height: 220px;
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
@@ -362,6 +362,112 @@ select:disabled {
   padding: var(--space-4);
   background: var(--color-bg);
   border: 1px dashed var(--color-border);
+}
+
+.chart-legend {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.chart-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-muted);
+  font-size: 10px;
+}
+
+.chart-legend__swatch {
+  width: 10px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+.chart-legend__swatch--gateway {
+  background: var(--color-success);
+}
+
+.chart-legend__swatch--internet {
+  background: var(--color-warning);
+}
+
+.latency-series-chart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Absolute fill so clientHeight matches the flexed .chart-plot (height:100% fails in this chain). */
+.latency-series-chart__plot {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+}
+
+.latency-series-chart__fallback {
+  display: grid;
+  place-items: center;
+  min-height: 220px;
+  color: var(--color-muted);
+  font: 11px var(--font-mono);
+}
+
+.latency-series-chart .uplot,
+.latency-series-chart .u-wrap {
+  font-family: var(--font-mono);
+  max-width: 100%;
+}
+
+.latency-series-chart .u-over {
+  cursor: default;
+}
+
+.latency-series-chart .u-select {
+  display: none;
+}
+
+.event-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  border-left: 1px dashed var(--color-danger);
+  pointer-events: none;
+}
+
+.event-marker--warning {
+  border-left-color: var(--color-warning);
+}
+
+.event-marker__label {
+  position: absolute;
+  top: 6px;
+  left: 4px;
+  padding: 2px 4px;
+  border-radius: 2px;
+  font-size: 9px;
+  white-space: nowrap;
+  background: rgb(255 77 56 / 13%);
+  color: var(--color-danger);
+}
+
+.event-marker--warning .event-marker__label {
+  background: rgb(232 174 74 / 13%);
+  color: var(--color-warning);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .latency-series-chart .uplot {
+    transition: none;
+  }
 }
 
 .tracepoint-card__title {
@@ -553,6 +659,10 @@ select:disabled {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-4);
+}
+
+.technical-grid > .chart-card {
+  min-height: 280px;
 }
 
 .panel {

@@ -9,6 +9,7 @@ const IPC_CHANNELS = {
   internetStatus: 'internet:get-status',
   createManualTracePoint: 'trace-point:create-manual',
   listTracePoints: 'trace-point:list-recent',
+  listNetworkSamples: 'network-sample:list-recent',
 } as const;
 
 const api = {
@@ -26,6 +27,19 @@ const api = {
   },
   listTracePoints(correlationId: string, limit = 20) {
     return ipcRenderer.invoke(IPC_CHANNELS.listTracePoints, { correlationId, limit });
+  },
+  listNetworkSamples(
+    correlationId: string,
+    options: {
+      sinceEpochMs: number;
+      targetRoles?: Array<'gateway' | 'internet'>;
+      maxPointsPerRole?: number;
+    },
+  ) {
+    return ipcRenderer.invoke(IPC_CHANNELS.listNetworkSamples, {
+      correlationId,
+      ...options,
+    });
   },
 };
 

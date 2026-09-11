@@ -58,6 +58,18 @@ export type {
   TracePointSummary,
 } from './contracts/trace-point.contract.js';
 export {
+  listNetworkSamplesRequestSchema,
+  listNetworkSamplesResponseSchema,
+  networkSamplePointSchema,
+  networkSampleSeriesRoleSchema,
+} from './contracts/network-sample-series.contract.js';
+export type {
+  ListNetworkSamplesRequest,
+  ListNetworkSamplesResponse,
+  NetworkSamplePoint,
+  NetworkSampleSeriesRole,
+} from './contracts/network-sample-series.contract.js';
+export {
   platformCapabilitiesSchema,
   runtimeStatusRequestSchema,
   runtimeStatusResponseSchema,

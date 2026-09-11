@@ -9,6 +9,7 @@ import {
   GetGatewayStatusService,
   GetInternetStatusService,
   InternetSamplePipeline,
+  ListRecentNetworkSamplesService,
   ListRecentTracePointsService,
   NetworkSamplePersistenceQueue,
   type NetworkSample,
@@ -23,6 +24,7 @@ import {
 } from '@telemetry-desk/infrastructure';
 import {
   createManualTracePointResponseSchema,
+  listNetworkSamplesResponseSchema,
   listTracePointsResponseSchema,
 } from '@telemetry-desk/shared';
 import { createNetworkPorts } from './create-network-ports.js';
@@ -70,6 +72,7 @@ const createManualTracePointService = new CreateManualTracePointService({
   internetHosts: internetStatusService.hosts,
 });
 const listRecentTracePointsService = new ListRecentTracePointsService(tracePointRepository);
+const listRecentNetworkSamplesService = new ListRecentNetworkSamplesService(networkSampleRepository);
 const finalizeOpenTracePointsService = new FinalizeOpenTracePointsService(
   clock,
   tracePointRepository,
@@ -120,6 +123,10 @@ const stop = runCollector({
     listTracePointsResponseSchema.shape.data.parse({
       items: (await listRecentTracePointsService.execute(limit)).map(toTracePointSummary),
     }).items,
+  listNetworkSamples: async (input) =>
+    listNetworkSamplesResponseSchema.shape.data.parse({
+      points: await listRecentNetworkSamplesService.execute(input),
+    }).points,
   finalizeOpenTracePoints: async () => {
     await finalizeOpenTracePointsService.execute();
   },

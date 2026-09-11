@@ -41,6 +41,13 @@ export { buildDiagnosisSignals } from './services/build-diagnosis-signals.js';
 export { CreateManualTracePointService } from './services/create-manual-trace-point.service.js';
 export type { CreateManualTracePointServiceDeps } from './services/create-manual-trace-point.service.js';
 export { ListRecentTracePointsService } from './services/list-recent-trace-points.service.js';
+export { ListRecentNetworkSamplesService } from './services/list-recent-network-samples.service.js';
+export type {
+  ListRecentNetworkSamplesInput,
+  ListRecentNetworkSamplesRepository,
+  NetworkSamplePoint,
+  NetworkSampleSeriesRole,
+} from './services/list-recent-network-samples.service.js';
 export { FinalizeOpenTracePointsService } from './services/finalize-open-trace-points.service.js';
 export { DetectAutomaticTracePointsService } from './services/detect-automatic-trace-points.service.js';
 export type { DetectAutomaticTracePointsServiceDeps } from './services/detect-automatic-trace-points.service.js';

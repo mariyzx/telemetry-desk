@@ -5,6 +5,7 @@ export const COLLECTOR_COMMANDS = {
   getInternetStatus: 'collector:get-internet-status',
   createManualTracePoint: 'collector:create-manual-trace-point',
   listTracePoints: 'collector:list-trace-points',
+  listNetworkSamples: 'collector:list-network-samples',
   shutdown: 'collector:shutdown',
 } as const;
 
@@ -17,6 +18,7 @@ const collectorCommandValues = [
   COLLECTOR_COMMANDS.getInternetStatus,
   COLLECTOR_COMMANDS.createManualTracePoint,
   COLLECTOR_COMMANDS.listTracePoints,
+  COLLECTOR_COMMANDS.listNetworkSamples,
   COLLECTOR_COMMANDS.shutdown,
 ] as const;
 

@@ -12,10 +12,13 @@ import {
   internetStatusRequestSchema,
   internetStatusResponseSchema,
   IPC_CHANNELS,
+  listNetworkSamplesRequestSchema,
+  listNetworkSamplesResponseSchema,
   listTracePointsRequestSchema,
   listTracePointsResponseSchema,
   runtimeStatusRequestSchema,
   runtimeStatusResponseSchema,
+  type NetworkSamplePoint,
   type TracePointSummary,
 } from '@telemetry-desk/shared';
 
@@ -83,6 +86,30 @@ export function registerTracePointIpc(
     return listTracePointsResponseSchema.parse({
       correlationId: request.correlationId,
       data: { items },
+    });
+  });
+}
+
+export function registerNetworkSampleIpc(
+  ipcMain: Pick<IpcMain, 'handle'>,
+  deps: {
+    listRecent: (input: {
+      sinceEpochMs: number;
+      targetRoles?: Array<'gateway' | 'internet'>;
+      maxPointsPerRole?: number;
+    }) => Promise<NetworkSamplePoint[]>;
+  },
+): void {
+  ipcMain.handle(IPC_CHANNELS.listNetworkSamples, async (_event, payload: unknown) => {
+    const request = listNetworkSamplesRequestSchema.parse(payload);
+    const points = await deps.listRecent({
+      sinceEpochMs: request.sinceEpochMs,
+      targetRoles: request.targetRoles,
+      maxPointsPerRole: request.maxPointsPerRole,
+    });
+    return listNetworkSamplesResponseSchema.parse({
+      correlationId: request.correlationId,
+      data: { points },
     });
   });
 }

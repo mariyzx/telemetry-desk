@@ -1,14 +1,48 @@
 import type { GatewayStatusState } from '../hooks/use-gateway-status.js';
 import type { InternetStatusState } from '../hooks/use-internet-status.js';
+import type { NetworkSampleSeriesState } from '../hooks/use-network-sample-series.js';
+import { NETWORK_SAMPLE_SERIES_WINDOW_MS } from '../hooks/use-network-sample-series.js';
 import { formatLatency } from '../lib/formatters.js';
+import { LatencySeriesChart } from './latency-series-chart.js';
 import { PlaceholderNote } from './placeholder-note.js';
 
 export interface TechnicalSectionProps {
   gateway: GatewayStatusState;
   internet: InternetStatusState;
+  series: NetworkSampleSeriesState;
 }
 
-export function TechnicalSection({ gateway, internet }: TechnicalSectionProps) {
+function LatencyChart({ series }: { series: NetworkSampleSeriesState }) {
+  const windowEndEpochMs = Date.now();
+  const windowStartEpochMs = windowEndEpochMs - NETWORK_SAMPLE_SERIES_WINDOW_MS;
+
+  if (series.kind === 'loading') {
+    return <div className="chart-plot chart-plot--placeholder">Carregando séries…</div>;
+  }
+
+  if (series.kind === 'error') {
+    return (
+      <div className="chart-plot chart-plot--placeholder">
+        <p role="alert">Não foi possível carregar as séries de latência.</p>
+      </div>
+    );
+  }
+
+  if (series.kind === 'empty') {
+    return <div className="chart-plot chart-plot--placeholder">Aguardando amostras…</div>;
+  }
+
+  return (
+    <LatencySeriesChart
+      points={series.points}
+      windowStartEpochMs={windowStartEpochMs}
+      windowEndEpochMs={windowEndEpochMs}
+      ariaLabel="Gráfico de latência Gateway e Internet"
+    />
+  );
+}
+
+export function TechnicalSection({ gateway, internet, series }: TechnicalSectionProps) {
   const gatewayValue =
     gateway.kind === 'success'
       ? formatLatency(gateway.data.latencyMs)
@@ -59,11 +93,7 @@ export function TechnicalSection({ gateway, internet }: TechnicalSectionProps) {
           <div className="chart-card__header">
             <h2 className="chart-card__title">Latência · Gateway / Internet</h2>
           </div>
-          <div className="chart-plot chart-plot--placeholder">
-            <PlaceholderNote>
-              Gráfico ilustrativo indisponível nesta versão — sem séries no bridge.
-            </PlaceholderNote>
-          </div>
+          <LatencyChart series={series} />
         </div>
         <div className="card chart-card panel">
           <div className="chart-card__header">

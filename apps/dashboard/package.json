@@ -12,7 +12,8 @@
   "dependencies": {
     "@telemetry-desk/shared": "^0.1.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "uplot": "^1.6.32"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^7.0.1",

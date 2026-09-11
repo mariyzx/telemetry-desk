@@ -28,6 +28,7 @@ describe('collector IPC protocol', () => {
     expect(isAllowlistedCollectorCommand('collector:get-internet-status')).toBe(true);
     expect(isAllowlistedCollectorCommand('collector:create-manual-trace-point')).toBe(true);
     expect(isAllowlistedCollectorCommand('collector:list-trace-points')).toBe(true);
+    expect(isAllowlistedCollectorCommand('collector:list-network-samples')).toBe(true);
     expect(isAllowlistedCollectorCommand('collector:drop-tables')).toBe(false);
 
     expect(() =>

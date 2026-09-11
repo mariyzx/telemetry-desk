@@ -8,7 +8,9 @@ import {
   createManualTracePointResponseSchema,
   gatewayStatusDataSchema,
   internetStatusDataSchema,
+  listNetworkSamplesResponseSchema,
   listTracePointsResponseSchema,
+  type NetworkSamplePoint,
   type TracePointSummary,
 } from '@telemetry-desk/shared';
 import type { GatewayStatus, InternetStatus } from '@telemetry-desk/application';
@@ -55,6 +57,11 @@ export interface CollectorSupervisor {
   getInternetStatus: () => Promise<InternetStatus>;
   createManualTracePoint: () => Promise<TracePointSummary>;
   listTracePoints: (limit?: number) => Promise<TracePointSummary[]>;
+  listNetworkSamples: (input: {
+    sinceEpochMs: number;
+    targetRoles?: Array<'gateway' | 'internet'>;
+    maxPointsPerRole?: number;
+  }) => Promise<NetworkSamplePoint[]>;
 }
 
 interface ActiveChild {
@@ -301,6 +308,25 @@ export function createCollectorSupervisor(
       try {
         const payload = await active.client.request(COLLECTOR_COMMANDS.listTracePoints, { limit });
         return listTracePointsResponseSchema.shape.data.parse(payload).items;
+      } catch {
+        return [];
+      }
+    },
+
+    listNetworkSamples: async (input) => {
+      if (health === 'degraded' || health === 'stopped' || !active) {
+        return [];
+      }
+
+      try {
+        const payload = await active.client.request(COLLECTOR_COMMANDS.listNetworkSamples, {
+          sinceEpochMs: input.sinceEpochMs,
+          ...(input.targetRoles ? { targetRoles: input.targetRoles } : {}),
+          ...(input.maxPointsPerRole !== undefined
+            ? { maxPointsPerRole: input.maxPointsPerRole }
+            : {}),
+        });
+        return listNetworkSamplesResponseSchema.shape.data.parse(payload).points;
       } catch {
         return [];
       }

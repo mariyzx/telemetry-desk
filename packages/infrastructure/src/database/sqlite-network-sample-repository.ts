@@ -1,5 +1,5 @@
-import { asc } from 'drizzle-orm';
-import type { MetricRepository, NetworkSample } from '@telemetry-desk/application';
+import { and, asc, gte, inArray } from 'drizzle-orm';
+import type { MetricRepository, NetworkSample, NetworkTargetRole } from '@telemetry-desk/application';
 import { networkSamples } from './schema.js';
 import type { TelemetryDatabase } from './open-sqlite-database.js';
 
@@ -35,25 +35,52 @@ export class SqliteNetworkSampleRepository implements MetricRepository {
     return Promise.resolve();
   }
 
+  listNetworkSamplesSince(input: {
+    sinceEpochMs: number;
+    targetRoles: readonly NetworkTargetRole[];
+  }): Promise<NetworkSample[]> {
+    if (input.targetRoles.length === 0) {
+      return Promise.resolve([]);
+    }
+
+    const rows = this.database.db
+      .select()
+      .from(networkSamples)
+      .where(
+        and(
+          gte(networkSamples.observedAtEpochMs, input.sinceEpochMs),
+          inArray(networkSamples.targetRole, [...input.targetRoles]),
+        ),
+      )
+      .orderBy(asc(networkSamples.observedAtEpochMs))
+      .all();
+
+    return Promise.resolve(rows.map((row) => this.mapRow(row)));
+  }
+
   listNetworkSamples(): NetworkSample[] {
     return this.database.db
       .select()
       .from(networkSamples)
       .orderBy(asc(networkSamples.observedAtEpochMs))
       .all()
-      .map((row) => ({
-        id: row.id,
-        observedAtEpochMs: row.observedAtEpochMs,
-        targetRole: row.targetRole as NetworkSample['targetRole'],
-        targetHost: row.targetHost,
-        interfaceId: row.interfaceId,
-        latencyMs: row.latencyMs,
-        jitterMs: row.jitterMs,
-        sent: row.sent,
-        received: row.received,
-        lossRatio: row.lossRatio,
-        quality: row.quality as NetworkSample['quality'],
-        errorCode: row.errorCode,
-      }));
+      .map((row) => this.mapRow(row));
+  }
+
+  private mapRow(row: typeof networkSamples.$inferSelect): NetworkSample {
+    return {
+      id: row.id,
+      observedAtEpochMs: row.observedAtEpochMs,
+      targetRole: row.targetRole as NetworkSample['targetRole'],
+      targetHost: row.targetHost,
+      interfaceId: row.interfaceId,
+      latencyMs: row.latencyMs,
+      jitterMs: row.jitterMs,
+      sent: row.sent,
+      received: row.received,
+      lossRatio: row.lossRatio,
+      quality: row.quality as NetworkSample['quality'],
+      errorCode: row.errorCode,
+    };
   }
 }

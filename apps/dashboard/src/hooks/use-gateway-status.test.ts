@@ -49,6 +49,10 @@ function stubDesktopApi(
       correlationId: crypto.randomUUID(),
       data: { items: [] },
     }),
+    listNetworkSamples: vi.fn().mockResolvedValue({
+      correlationId: crypto.randomUUID(),
+      data: { points: [] },
+    }),
     ...overrides,
   };
 }

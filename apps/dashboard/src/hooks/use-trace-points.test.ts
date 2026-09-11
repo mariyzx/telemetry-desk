@@ -34,6 +34,10 @@ it('loads and polls recent TracePoints', async () => {
     getGatewayStatus: vi.fn(),
     getInternetStatus: vi.fn(),
     createManualTracePoint: vi.fn(),
+    listNetworkSamples: vi.fn().mockResolvedValue({
+      correlationId: crypto.randomUUID(),
+      data: { points: [] },
+    }),
     listTracePoints: vi
       .fn()
       .mockResolvedValueOnce({

@@ -85,6 +85,10 @@ function installApi(overrides: Partial<NonNullable<typeof window.telemetryDesk>>
       correlationId: crypto.randomUUID(),
       data: { items: [] },
     }),
+    listNetworkSamples: vi.fn().mockResolvedValue({
+      correlationId: crypto.randomUUID(),
+      data: { points: [] },
+    }),
     ...overrides,
   };
   return window.telemetryDesk;
@@ -333,4 +337,39 @@ it('shows technical placeholders for jitter and loss', async () => {
   expect(screen.getByText('Jitter')).toBeInTheDocument();
   expect(screen.getByText('Perda')).toBeInTheDocument();
   expect(screen.getAllByText(/Indisponível nesta versão/).length).toBeGreaterThan(0);
+  expect(screen.queryByText(/sem séries no bridge/i)).not.toBeInTheDocument();
+});
+
+it('shows awaiting samples for continuous history when series is empty', async () => {
+  installApi();
+  render(<App />);
+  await flushEffects();
+
+  expect(screen.queryByText(/sem série temporal no bridge/i)).not.toBeInTheDocument();
+  expect(screen.getByText('Aguardando amostras…')).toBeInTheDocument();
+});
+
+it('renders continuous history chart when series points arrive', async () => {
+  const now = Date.now();
+  installApi({
+    listNetworkSamples: vi.fn().mockResolvedValue({
+      correlationId: crypto.randomUUID(),
+      data: {
+        points: [
+          { observedAtEpochMs: now - 60_000, targetRole: 'gateway', latencyMs: 12 },
+          { observedAtEpochMs: now - 30_000, targetRole: 'internet', latencyMs: 24 },
+        ],
+      },
+    }),
+  });
+
+  render(<App />);
+  await flushEffects();
+
+  expect(
+    screen.getByRole('img', {
+      name: /Gráfico de latência dos últimos 15 minutos/i,
+    }),
+  ).toBeInTheDocument();
+  expect(screen.getByText(/Gateway \(12 ms\)/)).toBeInTheDocument();
 });

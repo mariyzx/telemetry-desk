@@ -99,4 +99,47 @@ describe('SqliteNetworkSampleRepository', () => {
       database.close();
     }
   });
+
+  it('lists samples since a timestamp filtered by target role', async () => {
+    const dbPath = await createTempDbPath();
+    const database = openSqliteDatabase(dbPath);
+
+    try {
+      const repository = new SqliteNetworkSampleRepository(database);
+      await repository.appendNetworkSamples([
+        sample({
+          id: '01900000-0000-7000-8000-000000000010',
+          observedAtEpochMs: 1_000,
+          targetRole: 'gateway',
+          latencyMs: 1,
+        }),
+        sample({
+          id: '01900000-0000-7000-8000-000000000011',
+          observedAtEpochMs: 2_000,
+          targetRole: 'internet',
+          latencyMs: 2,
+        }),
+        sample({
+          id: '01900000-0000-7000-8000-000000000012',
+          observedAtEpochMs: 3_000,
+          targetRole: 'gateway',
+          latencyMs: 3,
+        }),
+      ]);
+
+      const rows = await repository.listNetworkSamplesSince({
+        sinceEpochMs: 2_000,
+        targetRoles: ['gateway'],
+      });
+
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        id: '01900000-0000-7000-8000-000000000012',
+        targetRole: 'gateway',
+        latencyMs: 3,
+      });
+    } finally {
+      database.close();
+    }
+  });
 });

@@ -11,7 +11,10 @@ import { CollectorProtocolHost, decodeNdjsonChunk } from '@telemetry-desk/infras
 import {
   COLLECTOR_COMMANDS,
   createManualTracePointResponseSchema,
+  listNetworkSamplesRequestSchema,
+  listNetworkSamplesResponseSchema,
   listTracePointsResponseSchema,
+  type NetworkSamplePoint,
   type TracePointSummary,
 } from '@telemetry-desk/shared';
 
@@ -37,6 +40,11 @@ export interface RunCollectorOptions {
   persistenceFlush?: () => void | Promise<void>;
   createManualTracePoint?: () => Promise<TracePointSummary>;
   listTracePoints?: (limit: number) => Promise<TracePointSummary[]>;
+  listNetworkSamples?: (input: {
+    sinceEpochMs: number;
+    targetRoles: Array<'gateway' | 'internet'>;
+    maxPointsPerRole: number;
+  }) => Promise<NetworkSamplePoint[]>;
   finalizeOpenTracePoints?: () => void | Promise<void>;
   heartbeatIntervalMs?: number;
   gatewaySampleIntervalMs?: number;
@@ -110,6 +118,31 @@ export function runCollector(options: RunCollectorOptions): () => void {
           : 20;
       const items = await options.listTracePoints?.(limit);
       return listTracePointsResponseSchema.shape.data.parse({ items });
+    });
+  }
+
+  if (options.listNetworkSamples) {
+    host.setHandler(COLLECTOR_COMMANDS.listNetworkSamples, async (payload) => {
+      const sinceEpochMs =
+        typeof payload['sinceEpochMs'] === 'number' && Number.isFinite(payload['sinceEpochMs'])
+          ? Math.max(0, Math.trunc(payload['sinceEpochMs']))
+          : 0;
+      const parsedRoles = listNetworkSamplesRequestSchema.shape.targetRoles.safeParse(
+        payload['targetRoles'],
+      );
+      const targetRoles = parsedRoles.success
+        ? parsedRoles.data
+        : (['gateway', 'internet'] as Array<'gateway' | 'internet'>);
+      const parsedMax = listNetworkSamplesRequestSchema.shape.maxPointsPerRole.safeParse(
+        payload['maxPointsPerRole'],
+      );
+      const maxPointsPerRole = parsedMax.success ? parsedMax.data : 900;
+      const points = await options.listNetworkSamples?.({
+        sinceEpochMs,
+        targetRoles,
+        maxPointsPerRole,
+      });
+      return listNetworkSamplesResponseSchema.shape.data.parse({ points });
     });
   }
 

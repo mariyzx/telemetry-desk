@@ -30,6 +30,10 @@ function stubDesktopApi(
     getInternetStatus: vi.fn(),
     createManualTracePoint: vi.fn(),
     listTracePoints: vi.fn(),
+    listNetworkSamples: vi.fn().mockResolvedValue({
+      correlationId: crypto.randomUUID(),
+      data: { points: [] },
+    }),
     ...overrides,
   };
 }
