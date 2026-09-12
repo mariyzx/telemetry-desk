@@ -182,7 +182,7 @@ export function SettingsSection() {
   const [tab, setTab] = useState<SettingsTab>('Coleta');
 
   return (
-    <section className="screen is-active" aria-labelledby="config-title">
+    <section className="screen screen--settings is-active" aria-labelledby="config-title">
       <div className="title">
         <h1 id="config-title">Configurações</h1>
         <p>Controle coleta, destinos, retenção e inicialização.</p>

@@ -126,6 +126,10 @@ it('renders shell with five section navigation buttons', async () => {
   expect(within(nav).getByRole('button', { name: 'Técnico' })).toBeInTheDocument();
   expect(within(nav).getByRole('button', { name: 'Configurações' })).toBeInTheDocument();
   expect(within(nav).getByRole('button', { name: 'Exportar' })).toBeInTheDocument();
+
+  const configButton = within(nav).getByRole('button', { name: 'Configurações' });
+  expect(configButton.querySelector('br')).toBeNull();
+  expect(configButton.querySelector('.nav-item__label')?.textContent).toBe('Configurações');
 });
 
 it('navigates between sections without losing the shell', async () => {
@@ -372,4 +376,34 @@ it('renders continuous history chart when series points arrive', async () => {
     }),
   ).toBeInTheDocument();
   expect(screen.getByText(/Gateway \(12 ms\)/)).toBeInTheDocument();
+});
+
+it('shows pending internet legend and partial note when only gateway has samples', async () => {
+  const now = Date.now();
+  installApi({
+    listNetworkSamples: vi.fn().mockResolvedValue({
+      correlationId: crypto.randomUUID(),
+      data: {
+        points: [{ observedAtEpochMs: now - 45_000, targetRole: 'gateway', latencyMs: 8 }],
+      },
+    }),
+  });
+
+  render(<App />);
+  await flushEffects();
+
+  expect(screen.getByText(/Gateway \(8 ms\)/)).toBeInTheDocument();
+  expect(screen.getByText(/Internet · aguardando/)).toBeInTheDocument();
+  expect(screen.getByText(/Internet ainda sem amostras nesta janela/)).toBeInTheDocument();
+  expect(screen.queryByText(/Internet \(—\)/)).not.toBeInTheDocument();
+});
+
+it('uses compact badges for path nodes still unavailable in this version', async () => {
+  installApi();
+  render(<App />);
+  await flushEffects();
+
+  expect(screen.getAllByText('Em breve')).toHaveLength(2);
+  expect(screen.getByTitle('Wi-Fi / Rede indisponível nesta versão')).toBeInTheDocument();
+  expect(screen.getByTitle('Servidor indisponível nesta versão')).toBeInTheDocument();
 });

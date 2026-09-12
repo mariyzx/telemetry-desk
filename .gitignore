@@ -17,3 +17,5 @@ Desktop.ini
 skills-lock.json
 .orchestra/
 .superpowers/
+.playwright-mcp/
+apps/desktop/e2e/screenshots/

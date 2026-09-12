@@ -44,7 +44,9 @@ export function AppShell({
           <IconLogoMark />
         </span>
         <span className="brand">TelemetryDesk</span>
-        <span className="live">MONITORANDO</span>
+        <span className="live" aria-live="polite">
+          MONITORANDO
+        </span>
         <span className="updated">Última atualização: {lastUpdatedLabel}</span>
         {manualFeedback ? (
           <span className="manual-feedback" role="status">
@@ -53,12 +55,13 @@ export function AppShell({
         ) : null}
         <button
           type="button"
-          className="danger button"
+          className={`danger button${manualBusy ? ' is-busy' : ''}`}
           onClick={onManualTracePoint}
           disabled={manualBusy}
+          aria-busy={manualBusy}
         >
           <IconAlert />
-          TRAVOU AGORA
+          {manualBusy ? 'REGISTRANDO…' : 'TRAVOU AGORA'}
         </button>
       </header>
 
@@ -75,10 +78,8 @@ export function AppShell({
               aria-current={active ? 'page' : undefined}
               onClick={() => onSectionChange(item.id)}
             >
-              <span>
-                <Icon />
-                {item.label}
-              </span>
+              <Icon />
+              <span className="nav-item__label">{item.label}</span>
             </button>
           );
         })}

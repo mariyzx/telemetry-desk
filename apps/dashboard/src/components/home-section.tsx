@@ -17,7 +17,11 @@ import {
   IconShield,
   IconWifi,
 } from './icons.js';
-import { LatencySeriesChart } from './latency-series-chart.js';
+import {
+  hasRoleLatency,
+  LatencyChartLegend,
+  LatencySeriesChart,
+} from './latency-series-chart.js';
 
 export interface HomeSectionProps {
   runtime: RuntimeStatusState;
@@ -27,6 +31,16 @@ export interface HomeSectionProps {
   tracePoints: TracePointSummary[];
   onCreateTracePoint: () => void;
   createBusy: boolean;
+}
+
+function pathNodeClassName(kind: 'loading' | 'success' | 'error' | 'idle'): string {
+  if (kind === 'loading') {
+    return 'path-node path-node--loading';
+  }
+  if (kind === 'error') {
+    return 'path-node path-node--unavailable';
+  }
+  return 'path-node';
 }
 
 function HistoryChart({
@@ -40,29 +54,64 @@ function HistoryChart({
   const windowStartEpochMs = windowEndEpochMs - NETWORK_SAMPLE_SERIES_WINDOW_MS;
 
   if (series.kind === 'loading') {
-    return <div className="chart-plot chart-plot--placeholder">Carregando histórico…</div>;
+    return (
+      <div className="chart-plot chart-plot--empty chart-plot--loading">
+        <p className="chart-empty__title">Carregando histórico…</p>
+        <p className="chart-empty__hint">Buscando amostras locais dos últimos 15 minutos.</p>
+      </div>
+    );
   }
 
   if (series.kind === 'error') {
     return (
-      <div className="chart-plot chart-plot--placeholder">
-        <p role="alert">Não foi possível carregar o histórico contínuo.</p>
+      <div className="chart-plot chart-plot--empty">
+        <p className="chart-empty__title" role="alert">
+          Não foi possível carregar o histórico contínuo.
+        </p>
       </div>
     );
   }
 
   if (series.kind === 'empty') {
-    return <div className="chart-plot chart-plot--placeholder">Aguardando amostras…</div>;
+    return (
+      <div className="chart-plot chart-plot--empty">
+        <p className="chart-empty__title">Aguardando amostras…</p>
+        <p className="chart-empty__hint">
+          O histórico contínuo aparece assim que o coletor registrar latência local.
+        </p>
+      </div>
+    );
   }
 
+  const gatewayReady = hasRoleLatency(series.points, 'gateway');
+  const internetReady = hasRoleLatency(series.points, 'internet');
+  const ariaParts = [
+    'Gráfico de latência dos últimos 15 minutos',
+    gatewayReady ? 'com série Gateway' : 'sem série Gateway ainda',
+    internetReady ? 'e série Internet' : 'e Internet ainda sem amostras',
+  ];
+
   return (
-    <LatencySeriesChart
-      points={series.points}
-      windowStartEpochMs={windowStartEpochMs}
-      windowEndEpochMs={windowEndEpochMs}
-      markers={markers}
-      ariaLabel="Gráfico de latência dos últimos 15 minutos, Gateway e Internet"
-    />
+    <>
+      <LatencySeriesChart
+        points={series.points}
+        windowStartEpochMs={windowStartEpochMs}
+        windowEndEpochMs={windowEndEpochMs}
+        markers={markers}
+        showLegend={false}
+        ariaLabel={ariaParts.join(', ')}
+      />
+      {gatewayReady && !internetReady ? (
+        <p className="chart-partial-note">
+          Internet ainda sem amostras nesta janela — a linha laranja aparece quando o ISP responder.
+        </p>
+      ) : null}
+      {!gatewayReady && internetReady ? (
+        <p className="chart-partial-note">
+          Gateway ainda sem amostras nesta janela — a linha verde aparece quando o gateway responder.
+        </p>
+      ) : null}
+    </>
   );
 }
 
@@ -84,15 +133,18 @@ export function HomeSection({
     gateway.kind === 'success'
       ? `${formatLatency(gateway.data.latencyMs)} · ${formatProbeQuality(gateway.data.quality)}`
       : gateway.kind === 'loading'
-        ? 'Carregando…'
-        : 'Indisponível';
+        ? 'Medindo…'
+        : 'Sem leitura';
 
   const ispMeta =
     internet.kind === 'success'
       ? `${formatLatency(internet.data.primary.latencyMs)} · ${formatProbeQuality(internet.data.primary.quality)}`
       : internet.kind === 'loading'
-        ? 'Carregando…'
-        : 'Indisponível';
+        ? 'Medindo…'
+        : 'Sem leitura';
+
+  const runtimeMeta =
+    runtime.kind === 'success' ? 'Ativo' : runtime.kind === 'loading' ? 'Sincronizando…' : 'Offline';
 
   const windowStartEpochMs = Date.now() - NETWORK_SAMPLE_SERIES_WINDOW_MS;
   const markers = tracePoints
@@ -115,25 +167,40 @@ export function HomeSection({
       ) : null}
 
       <div className="card diagnostic-path" role="list" aria-label="Caminho de diagnóstico da conexão">
-        <div className="path-node" role="listitem">
+        <div
+          className={pathNodeClassName(
+            runtime.kind === 'loading' ? 'loading' : runtime.kind === 'error' ? 'error' : 'success',
+          )}
+          role="listitem"
+        >
           <span className="path-node__icon">
             <IconMonitor />
           </span>
           <span className="path-node__label">Seu PC</span>
-          <span className="path-node__meta">
-            {runtime.kind === 'success' ? 'Ativo' : runtime.kind === 'loading' ? '…' : '—'}
-          </span>
+          <span className="path-node__meta">{runtimeMeta}</span>
         </div>
         <span className="path-connector" aria-hidden="true" />
-        <div className="path-node" role="listitem">
+        <div
+          className="path-node path-node--disabled"
+          role="listitem"
+          aria-disabled="true"
+          title="Wi-Fi / Rede indisponível nesta versão"
+        >
           <span className="path-node__icon">
             <IconWifi />
           </span>
           <span className="path-node__label">Wi-Fi / Rede</span>
-          <span className="path-node__meta">Indisponível nesta versão</span>
+          <span className="path-node__meta">
+            <span className="path-node__badge">Em breve</span>
+          </span>
         </div>
-        <span className="path-connector" aria-hidden="true" />
-        <div className="path-node" role="listitem">
+        <span className="path-connector path-connector--muted" aria-hidden="true" />
+        <div
+          className={pathNodeClassName(
+            gateway.kind === 'loading' ? 'loading' : gateway.kind === 'error' ? 'error' : 'success',
+          )}
+          role="listitem"
+        >
           <span className="path-node__icon">
             <IconHardDrive />
           </span>
@@ -141,20 +208,36 @@ export function HomeSection({
           <span className="path-node__meta">{gatewayMeta}</span>
         </div>
         <span className="path-connector" aria-hidden="true" />
-        <div className="path-node" role="listitem">
+        <div
+          className={pathNodeClassName(
+            internet.kind === 'loading'
+              ? 'loading'
+              : internet.kind === 'error'
+                ? 'error'
+                : 'success',
+          )}
+          role="listitem"
+        >
           <span className="path-node__icon">
             <IconGlobe />
           </span>
           <span className="path-node__label">Provedor / ISP</span>
           <span className="path-node__meta">{ispMeta}</span>
         </div>
-        <span className="path-connector" aria-hidden="true" />
-        <div className="path-node" role="listitem">
+        <span className="path-connector path-connector--muted" aria-hidden="true" />
+        <div
+          className="path-node path-node--disabled"
+          role="listitem"
+          aria-disabled="true"
+          title="Servidor indisponível nesta versão"
+        >
           <span className="path-node__icon">
             <IconServer />
           </span>
           <span className="path-node__label">Servidor</span>
-          <span className="path-node__meta">Indisponível nesta versão</span>
+          <span className="path-node__meta">
+            <span className="path-node__badge">Em breve</span>
+          </span>
         </div>
       </div>
 
@@ -162,6 +245,7 @@ export function HomeSection({
         <div className="card chart-card">
           <div className="chart-card__header">
             <h2 className="chart-card__title">Histórico contínuo (Últimos 15 minutos)</h2>
+            {series.kind === 'success' ? <LatencyChartLegend points={series.points} /> : null}
           </div>
           <HistoryChart series={series} markers={markers} />
         </div>
@@ -183,11 +267,12 @@ export function HomeSection({
             </p>
             <button
               type="button"
-              className="button-secondary"
+              className={`button-secondary${createBusy ? ' is-busy' : ''}`}
               onClick={onCreateTracePoint}
               disabled={createBusy}
+              aria-busy={createBusy}
             >
-              Criar TracePoint
+              {createBusy ? 'Criando…' : 'Criar TracePoint'}
             </button>
           </div>
         </aside>
