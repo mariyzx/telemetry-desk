@@ -19,3 +19,4 @@ skills-lock.json
 .superpowers/
 .playwright-mcp/
 apps/desktop/e2e/screenshots/
+.claude
