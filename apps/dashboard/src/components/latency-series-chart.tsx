@@ -386,9 +386,7 @@ export function LatencySeriesChart({
         {canvasAvailable ? (
           <div ref={rootRef} className="latency-series-chart__plot" />
         ) : (
-          <div className="latency-series-chart__fallback">
-            {points.length} amostras na janela
-          </div>
+          <div className="latency-series-chart__fallback">{points.length} amostras na janela</div>
         )}
         {markerPositions.map((marker) => (
           <div

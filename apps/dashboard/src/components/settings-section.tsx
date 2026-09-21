@@ -1,13 +1,7 @@
 import { useState } from 'react';
 import { PlaceholderNote } from './placeholder-note.js';
 
-const SETTINGS_TABS = [
-  'Coleta',
-  'Alvos',
-  'Armazenamento',
-  'Inicialização',
-  'Privacidade',
-] as const;
+const SETTINGS_TABS = ['Coleta', 'Alvos', 'Armazenamento', 'Inicialização', 'Privacidade'] as const;
 
 type SettingsTab = (typeof SETTINGS_TABS)[number];
 
@@ -95,7 +89,9 @@ function ArmazenamentoPanel() {
     <>
       <div className="group">
         <h3>Retenção local</h3>
-        <p>Dados permanecem no dispositivo; faixas protegidas por TracePoints têm retenção longa.</p>
+        <p>
+          Dados permanecem no dispositivo; faixas protegidas por TracePoints têm retenção longa.
+        </p>
         <label className="field-row" htmlFor="cfg-retention-metrics">
           <span>Métricas agregadas</span>
           <select id="cfg-retention-metrics" disabled>

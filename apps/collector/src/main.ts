@@ -72,7 +72,9 @@ const createManualTracePointService = new CreateManualTracePointService({
   internetHosts: internetStatusService.hosts,
 });
 const listRecentTracePointsService = new ListRecentTracePointsService(tracePointRepository);
-const listRecentNetworkSamplesService = new ListRecentNetworkSamplesService(networkSampleRepository);
+const listRecentNetworkSamplesService = new ListRecentNetworkSamplesService(
+  networkSampleRepository,
+);
 const finalizeOpenTracePointsService = new FinalizeOpenTracePointsService(
   clock,
   tracePointRepository,

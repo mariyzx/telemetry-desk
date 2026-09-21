@@ -429,8 +429,7 @@ select:disabled {
   gap: var(--space-2);
   padding: var(--space-5) var(--space-4);
   border-radius: var(--radius-lg);
-  background:
-    linear-gradient(180deg, rgb(21 24 30 / 88%) 0%, var(--color-surface) 100%);
+  background: linear-gradient(180deg, rgb(21 24 30 / 88%) 0%, var(--color-surface) 100%);
   min-width: 0;
 }
 
@@ -562,14 +561,13 @@ select:disabled {
 .path-connector--muted {
   height: 1px;
   opacity: 0.55;
-  background:
-    repeating-linear-gradient(
-      90deg,
-      transparent 0,
-      transparent 3px,
-      var(--color-border) 3px,
-      var(--color-border) 5px
-    );
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0,
+    transparent 3px,
+    var(--color-border) 3px,
+    var(--color-border) 5px
+  );
 }
 
 .home-grid {
@@ -627,8 +625,7 @@ select:disabled {
   align-content: center;
   gap: var(--space-2);
   padding: var(--space-5) var(--space-4);
-  background:
-    radial-gradient(ellipse at center, rgb(21 24 30 / 80%) 0%, var(--color-bg) 72%);
+  background: radial-gradient(ellipse at center, rgb(21 24 30 / 80%) 0%, var(--color-bg) 72%);
   border: 1px solid var(--color-border);
 }
 

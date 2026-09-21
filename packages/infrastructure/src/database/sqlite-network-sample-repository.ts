@@ -1,5 +1,9 @@
 import { and, asc, gte, inArray } from 'drizzle-orm';
-import type { MetricRepository, NetworkSample, NetworkTargetRole } from '@telemetry-desk/application';
+import type {
+  MetricRepository,
+  NetworkSample,
+  NetworkTargetRole,
+} from '@telemetry-desk/application';
 import { networkSamples } from './schema.js';
 import type { TelemetryDatabase } from './open-sqlite-database.js';
 

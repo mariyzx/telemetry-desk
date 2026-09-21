@@ -4,11 +4,7 @@ import type { InternetStatusState } from '../hooks/use-internet-status.js';
 import type { NetworkSampleSeriesState } from '../hooks/use-network-sample-series.js';
 import { NETWORK_SAMPLE_SERIES_WINDOW_MS } from '../hooks/use-network-sample-series.js';
 import type { RuntimeStatusState } from '../hooks/use-runtime-status.js';
-import {
-  countEnabledCapabilities,
-  formatLatency,
-  formatProbeQuality,
-} from '../lib/formatters.js';
+import { countEnabledCapabilities, formatLatency, formatProbeQuality } from '../lib/formatters.js';
 import {
   IconGlobe,
   IconHardDrive,
@@ -17,11 +13,7 @@ import {
   IconShield,
   IconWifi,
 } from './icons.js';
-import {
-  hasRoleLatency,
-  LatencyChartLegend,
-  LatencySeriesChart,
-} from './latency-series-chart.js';
+import { hasRoleLatency, LatencyChartLegend, LatencySeriesChart } from './latency-series-chart.js';
 
 export interface HomeSectionProps {
   runtime: RuntimeStatusState;
@@ -108,7 +100,8 @@ function HistoryChart({
       ) : null}
       {!gatewayReady && internetReady ? (
         <p className="chart-partial-note">
-          Gateway ainda sem amostras nesta janela — a linha verde aparece quando o gateway responder.
+          Gateway ainda sem amostras nesta janela — a linha verde aparece quando o gateway
+          responder.
         </p>
       ) : null}
     </>
@@ -125,9 +118,7 @@ export function HomeSection({
   createBusy,
 }: HomeSectionProps) {
   const sensors =
-    runtime.kind === 'success'
-      ? `${countEnabledCapabilities(runtime.data.capabilities)}/6`
-      : '—/6';
+    runtime.kind === 'success' ? `${countEnabledCapabilities(runtime.data.capabilities)}/6` : '—/6';
 
   const gatewayMeta =
     gateway.kind === 'success'
@@ -144,7 +135,11 @@ export function HomeSection({
         : 'Sem leitura';
 
   const runtimeMeta =
-    runtime.kind === 'success' ? 'Ativo' : runtime.kind === 'loading' ? 'Sincronizando…' : 'Offline';
+    runtime.kind === 'success'
+      ? 'Ativo'
+      : runtime.kind === 'loading'
+        ? 'Sincronizando…'
+        : 'Offline';
 
   const windowStartEpochMs = Date.now() - NETWORK_SAMPLE_SERIES_WINDOW_MS;
   const markers = tracePoints
@@ -152,7 +147,7 @@ export function HomeSection({
     .map((item) => ({
       atEpochMs: item.triggeredAtEpochMs,
       label: item.origin === 'manual' ? 'Manual' : 'Automático',
-      tone: (item.origin === 'automatic' ? 'warning' : 'default') as 'default' | 'warning',
+      tone: item.origin === 'automatic' ? ('warning' as const) : ('default' as const),
     }));
 
   return (
@@ -166,7 +161,11 @@ export function HomeSection({
         <p role="alert">Não foi possível obter o status local.</p>
       ) : null}
 
-      <div className="card diagnostic-path" role="list" aria-label="Caminho de diagnóstico da conexão">
+      <div
+        className="card diagnostic-path"
+        role="list"
+        aria-label="Caminho de diagnóstico da conexão"
+      >
         <div
           className={pathNodeClassName(
             runtime.kind === 'loading' ? 'loading' : runtime.kind === 'error' ? 'error' : 'success',
