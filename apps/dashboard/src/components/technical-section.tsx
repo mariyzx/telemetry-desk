@@ -2,7 +2,7 @@ import type { GatewayStatusState } from '../hooks/use-gateway-status.js';
 import type { InternetStatusState } from '../hooks/use-internet-status.js';
 import type { NetworkSampleSeriesState } from '../hooks/use-network-sample-series.js';
 import { NETWORK_SAMPLE_SERIES_WINDOW_MS } from '../hooks/use-network-sample-series.js';
-import { formatLatency } from '../lib/formatters.js';
+import { formatLatency, formatProbeQuality } from '../lib/formatters.js';
 import { LatencySeriesChart } from './latency-series-chart.js';
 import { PlaceholderNote } from './placeholder-note.js';
 
@@ -51,7 +51,7 @@ export function TechnicalSection({ gateway, internet, series }: TechnicalSection
         : '—';
   const internetValue =
     internet.kind === 'success'
-      ? formatLatency(internet.data.primary.latencyMs)
+      ? `${formatLatency(internet.data.primary.latencyMs)} · ${formatProbeQuality(internet.data.primary.quality)}`
       : internet.kind === 'loading'
         ? '…'
         : '—';

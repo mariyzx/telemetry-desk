@@ -35,8 +35,8 @@ export interface InternetStatus {
 
 /**
  * Probes public internet hosts via ICMP, with optional TCP fallback when ICMP
- * times out (common when firewalls drop public echo requests). Tries DNS-appropriate
- * ports (53, then 443). TCP success means reachability only — never reported as ICMP latency.
+ * times out. Tries ports 53 then 443. TCP success reports connect RTT as
+ * quality `tcp_rtt` — never as ICMP `ok`.
  */
 export class GetInternetStatusService {
   readonly hosts: InternetTargetHosts;
@@ -63,10 +63,10 @@ export class GetInternetStatusService {
 
     if (quality === 'timeout' && this.tcpReachability !== null) {
       for (const port of this.tcpFallbackPorts) {
-        const reachable = await this.tcpReachability.isReachable(host, port);
-        if (reachable) {
-          latencyMs = null;
-          quality = 'reachable';
+        const tcp = await this.tcpReachability.probe(host, port);
+        if (tcp.ok && tcp.latencyMs !== null) {
+          latencyMs = tcp.latencyMs;
+          quality = 'tcp_rtt';
           break;
         }
       }

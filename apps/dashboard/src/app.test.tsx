@@ -202,22 +202,22 @@ it('shows distinct settings panels per tab', async () => {
   expect(screen.getByRole('heading', { name: 'Privacidade local' })).toBeInTheDocument();
 });
 
-it('shows TCP reachability on the ISP path node when ICMP is blocked', async () => {
+it('shows TCP RTT on the ISP path node when ICMP is blocked', async () => {
   installApi({
     getInternetStatus: vi.fn().mockResolvedValue({
       correlationId: crypto.randomUUID(),
       data: {
         primary: {
           host: '1.1.1.1',
-          latencyMs: null,
-          quality: 'reachable' as const,
+          latencyMs: 24,
+          quality: 'tcp_rtt' as const,
           observedAtEpochMs: 1700000000000,
           monotonicMs: 42,
         },
         secondary: {
           host: '8.8.8.8',
-          latencyMs: null,
-          quality: 'reachable' as const,
+          latencyMs: 28,
+          quality: 'tcp_rtt' as const,
           observedAtEpochMs: 1700000001000,
           monotonicMs: 1042,
         },
@@ -231,7 +231,40 @@ it('shows TCP reachability on the ISP path node when ICMP is blocked', async () 
   await flushEffects();
 
   expect(screen.getByText('Provedor / ISP')).toBeInTheDocument();
-  expect(screen.getByText(/Alcançável \(ICMP bloqueado\)/)).toBeInTheDocument();
+  expect(screen.getByText(/24 ms · RTT TCP \(ICMP bloqueado\)/)).toBeInTheDocument();
+});
+
+it('shows TCP RTT quality on the Técnico Internet card', async () => {
+  installApi({
+    getInternetStatus: vi.fn().mockResolvedValue({
+      correlationId: crypto.randomUUID(),
+      data: {
+        primary: {
+          host: '1.1.1.1',
+          latencyMs: 24,
+          quality: 'tcp_rtt' as const,
+          observedAtEpochMs: 1700000000000,
+          monotonicMs: 42,
+        },
+        secondary: {
+          host: '8.8.8.8',
+          latencyMs: 28,
+          quality: 'tcp_rtt' as const,
+          observedAtEpochMs: 1700000001000,
+          monotonicMs: 1042,
+        },
+        observedAtEpochMs: 1700000001000,
+        monotonicMs: 1042,
+      },
+    }),
+  });
+
+  render(<App />);
+  await flushEffects();
+  fireEvent.click(screen.getByRole('button', { name: 'Técnico' }));
+
+  expect(screen.getByText('Internet')).toBeInTheDocument();
+  expect(screen.getByText(/24 ms · RTT TCP \(ICMP bloqueado\)/)).toBeInTheDocument();
 });
 
 it('shows a recent manual TracePoint in the TracePoints section', async () => {

@@ -7,6 +7,7 @@ export const probeQualitySchema = z.enum([
   'timeout',
   'unavailable',
   'reachable',
+  'tcp_rtt',
 ]);
 
 export const gatewayStatusDataSchema = z

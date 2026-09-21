@@ -16,6 +16,7 @@ export type {
   TcpReachabilityPort,
   WifiMetricsPort,
 } from './ports/telemetry-ports.js';
+export type { TcpReachabilityResult } from './ports/telemetry-ports.js';
 export type { TracePointRepository } from './ports/trace-point-repository.js';
 export type { GatewayStatus } from './services/get-gateway-status.service.js';
 export { GetGatewayStatusService } from './services/get-gateway-status.service.js';

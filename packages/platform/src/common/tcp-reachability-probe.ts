@@ -1,20 +1,22 @@
 import { createConnection } from 'node:net';
-import type { TcpReachabilityPort } from '@telemetry-desk/application';
+import { performance } from 'node:perf_hooks';
+import type { TcpReachabilityPort, TcpReachabilityResult } from '@telemetry-desk/application';
 
 export type TcpConnectAttempt = (options: {
   host: string;
   port: number;
   timeoutMs: number;
-}) => Promise<boolean>;
+}) => Promise<TcpReachabilityResult>;
 
 const DEFAULT_TIMEOUT_MS = 1500;
 
 /**
- * TCP connect check for “is the host reachable?” when ICMP is filtered.
- * Does not measure or report latency suitable for ICMP charts.
+ * TCP connect with connect-time RTT for fallback when ICMP is filtered.
+ * latencyMs is SYN-ACK establishment time, not ICMP echo RTT.
  */
 export const defaultTcpConnectAttempt: TcpConnectAttempt = ({ host, port, timeoutMs }) =>
   new Promise((resolve) => {
+    const startedAt = performance.now();
     const socket = createConnection({ host, port });
     let settled = false;
 
@@ -25,7 +27,10 @@ export const defaultTcpConnectAttempt: TcpConnectAttempt = ({ host, port, timeou
       settled = true;
       socket.removeAllListeners();
       socket.destroy();
-      resolve(ok);
+      resolve({
+        ok,
+        latencyMs: ok ? Math.round(performance.now() - startedAt) : null,
+      });
     };
 
     const timer = setTimeout(() => finish(false), timeoutMs);
@@ -54,7 +59,7 @@ export class NodeTcpReachabilityProbe implements TcpReachabilityPort {
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 
-  isReachable(host: string, port = 53): Promise<boolean> {
+  probe(host: string, port = 53): Promise<TcpReachabilityResult> {
     return this.connect({ host, port, timeoutMs: this.timeoutMs });
   }
 }

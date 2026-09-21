@@ -7,5 +7,6 @@ it('formats null latency as em dash', () => {
 
 it('formats probe quality in Portuguese', () => {
   expect(formatProbeQuality('timeout')).toBe('Sem resposta ICMP');
+  expect(formatProbeQuality('tcp_rtt')).toBe('RTT TCP (ICMP bloqueado)');
   expect(formatProbeQuality('reachable')).toBe('Alcançável (ICMP bloqueado)');
 });

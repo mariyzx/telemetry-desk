@@ -4,8 +4,13 @@ export type ProbeQuality =
   | 'permission_denied'
   | 'timeout'
   | 'unavailable'
-  /** Host answered on a non-ICMP path (e.g. TCP/53 or TCP/443); latencyMs must stay null. */
-  | 'reachable';
+  /**
+   * Legacy: TCP connectivity without RTT. New probes must not emit this on the happy path.
+   * latencyMs must stay null when quality is reachable.
+   */
+  | 'reachable'
+  /** TCP connect RTT after ICMP timeout; latencyMs must be a non-null integer ms. */
+  | 'tcp_rtt';
 
 export interface Clock {
   nowEpochMs(): number;
@@ -16,13 +21,18 @@ export interface NetworkProbePort {
   probe(host: string): Promise<{ latencyMs: number | null; quality: ProbeQuality }>;
 }
 
+export interface TcpReachabilityResult {
+  ok: boolean;
+  latencyMs: number | null;
+}
+
 /**
- * Lightweight reachability check used when ICMP times out.
+ * TCP connect RTT used when ICMP times out.
  * Callers pick DNS-appropriate ports (typically 53, then 443).
- * Must not invent ICMP latency — only boolean connectivity.
+ * Success reports connect-time latency — never presented as ICMP RTT.
  */
 export interface TcpReachabilityPort {
-  isReachable(host: string, port?: number): Promise<boolean>;
+  probe(host: string, port?: number): Promise<TcpReachabilityResult>;
 }
 
 export interface GatewayResolverPort {

@@ -4,7 +4,8 @@ export type ProbeQuality =
   | 'permission_denied'
   | 'unsupported'
   | 'unavailable'
-  | 'reachable';
+  | 'reachable'
+  | 'tcp_rtt';
 
 export type TracePointOrigin = 'manual' | 'automatic';
 
@@ -19,6 +20,8 @@ export function formatProbeQuality(quality: ProbeQuality): string {
   switch (quality) {
     case 'ok':
       return 'Bom';
+    case 'tcp_rtt':
+      return 'RTT TCP (ICMP bloqueado)';
     case 'reachable':
       return 'Alcançável (ICMP bloqueado)';
     case 'timeout':

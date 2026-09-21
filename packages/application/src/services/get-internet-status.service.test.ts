@@ -46,30 +46,34 @@ describe('GetInternetStatusService', () => {
     expect(DEFAULT_INTERNET_TCP_FALLBACK_PORTS).toEqual([53, 443]);
   });
 
-  it('falls back to TCP reachability without inventing ICMP latency', async () => {
+  it('falls back to TCP connect RTT with quality tcp_rtt', async () => {
     const networkProbe: NetworkProbePort = {
       probe: async () => ({ latencyMs: null, quality: 'timeout' }),
     };
     const tcpReachability: TcpReachabilityPort = {
-      isReachable: vi.fn().mockResolvedValue(true),
+      probe: vi.fn().mockResolvedValue({ ok: true, latencyMs: 27 }),
     };
 
     const service = new GetInternetStatusService(clock, networkProbe, undefined, tcpReachability);
 
     await expect(service.probeHost(DEFAULT_INTERNET_PRIMARY_HOST)).resolves.toEqual({
       host: DEFAULT_INTERNET_PRIMARY_HOST,
-      latencyMs: null,
-      quality: 'reachable',
+      latencyMs: 27,
+      quality: 'tcp_rtt',
       observedAtEpochMs: 1_700_000_000_000,
       monotonicMs: 42,
     });
-    expect(tcpReachability.isReachable).toHaveBeenCalledWith(DEFAULT_INTERNET_PRIMARY_HOST, 53);
-    expect(tcpReachability.isReachable).toHaveBeenCalledTimes(1);
+    expect(tcpReachability.probe).toHaveBeenCalledWith(DEFAULT_INTERNET_PRIMARY_HOST, 53);
+    expect(tcpReachability.probe).toHaveBeenCalledTimes(1);
   });
 
   it('tries DNS TCP/53 then TCP/443 when the first fallback port fails', async () => {
     const tcpReachability: TcpReachabilityPort = {
-      isReachable: vi.fn().mockImplementation(async (_host, port) => port === 443),
+      probe: vi.fn().mockImplementation(async (_host, port) =>
+        port === 443
+          ? { ok: true, latencyMs: 31 }
+          : { ok: false, latencyMs: null },
+      ),
     };
     const service = new GetInternetStatusService(
       clock,
@@ -80,15 +84,15 @@ describe('GetInternetStatusService', () => {
 
     await expect(service.probeHost(DEFAULT_INTERNET_SECONDARY_HOST)).resolves.toMatchObject({
       host: DEFAULT_INTERNET_SECONDARY_HOST,
-      latencyMs: null,
-      quality: 'reachable',
+      latencyMs: 31,
+      quality: 'tcp_rtt',
     });
-    expect(tcpReachability.isReachable).toHaveBeenNthCalledWith(
+    expect(tcpReachability.probe).toHaveBeenNthCalledWith(
       1,
       DEFAULT_INTERNET_SECONDARY_HOST,
       53,
     );
-    expect(tcpReachability.isReachable).toHaveBeenNthCalledWith(
+    expect(tcpReachability.probe).toHaveBeenNthCalledWith(
       2,
       DEFAULT_INTERNET_SECONDARY_HOST,
       443,
@@ -100,7 +104,7 @@ describe('GetInternetStatusService', () => {
       clock,
       { probe: async () => ({ latencyMs: null, quality: 'timeout' }) },
       undefined,
-      { isReachable: async () => false },
+      { probe: async () => ({ ok: false, latencyMs: null }) },
     );
 
     await expect(service.probeHost('8.8.8.8')).resolves.toMatchObject({
@@ -112,7 +116,7 @@ describe('GetInternetStatusService', () => {
 
   it('does not attempt TCP when ICMP succeeds', async () => {
     const tcpReachability: TcpReachabilityPort = {
-      isReachable: vi.fn(),
+      probe: vi.fn(),
     };
     const service = new GetInternetStatusService(
       clock,
@@ -122,6 +126,6 @@ describe('GetInternetStatusService', () => {
     );
 
     await service.probeHost(DEFAULT_INTERNET_PRIMARY_HOST);
-    expect(tcpReachability.isReachable).not.toHaveBeenCalled();
+    expect(tcpReachability.probe).not.toHaveBeenCalled();
   });
 });

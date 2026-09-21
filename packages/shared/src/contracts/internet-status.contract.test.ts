@@ -30,7 +30,7 @@ it('accepts dual public internet status', () => {
   ).toBe(true);
 });
 
-it('accepts TCP reachability without ICMP latency', () => {
+it('accepts TCP reachability without ICMP latency (legacy)', () => {
   expect(
     internetStatusResponseSchema.safeParse({
       correlationId: '8bbf73d6-57ca-4fdd-9ce7-57bcd2404520',
@@ -46,6 +46,32 @@ it('accepts TCP reachability without ICMP latency', () => {
           host: '8.8.8.8',
           latencyMs: null,
           quality: 'reachable',
+          observedAtEpochMs: 1_700_000_001_000,
+          monotonicMs: 1_042,
+        },
+        observedAtEpochMs: 1_700_000_001_000,
+        monotonicMs: 1_042,
+      },
+    }).success,
+  ).toBe(true);
+});
+
+it('accepts TCP connect RTT after ICMP timeout', () => {
+  expect(
+    internetStatusResponseSchema.safeParse({
+      correlationId: '8bbf73d6-57ca-4fdd-9ce7-57bcd2404520',
+      data: {
+        primary: {
+          host: '1.1.1.1',
+          latencyMs: 24,
+          quality: 'tcp_rtt',
+          observedAtEpochMs: 1_700_000_000_000,
+          monotonicMs: 42,
+        },
+        secondary: {
+          host: '8.8.8.8',
+          latencyMs: 31,
+          quality: 'tcp_rtt',
           observedAtEpochMs: 1_700_000_001_000,
           monotonicMs: 1_042,
         },

@@ -52,7 +52,7 @@ describe('toInternetNetworkSample', () => {
     });
   });
 
-  it('records TCP reachability without inventing ICMP latency', () => {
+  it('records legacy TCP reachability without inventing latency', () => {
     expect(
       toInternetNetworkSample(
         {
@@ -76,6 +76,34 @@ describe('toInternetNetworkSample', () => {
       received: 1,
       lossRatio: 0,
       quality: 'reachable',
+      errorCode: null,
+    });
+  });
+
+  it('persists TCP connect RTT for quality tcp_rtt', () => {
+    expect(
+      toInternetNetworkSample(
+        {
+          host: '1.1.1.1',
+          latencyMs: 29,
+          quality: 'tcp_rtt',
+          observedAtEpochMs: 1_700_000_000_300,
+          monotonicMs: 342,
+        },
+        'sample-4',
+      ),
+    ).toEqual({
+      id: 'sample-4',
+      observedAtEpochMs: 1_700_000_000_300,
+      targetRole: 'internet',
+      targetHost: '1.1.1.1',
+      interfaceId: null,
+      latencyMs: 29,
+      jitterMs: null,
+      sent: 1,
+      received: 1,
+      lossRatio: 0,
+      quality: 'tcp_rtt',
       errorCode: null,
     });
   });
