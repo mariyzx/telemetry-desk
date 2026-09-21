@@ -13,6 +13,7 @@ export default tseslint.config(
       'node_modules/**',
       'apps/desktop/src/preload/**',
       'apps/desktop/scripts/**',
+      'apps/desktop/e2e/**',
       'apps/desktop/diag-black-screen.mjs',
     ],
   },

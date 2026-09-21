@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 export type ManualTracePointState =
-  | { kind: 'idle' }
-  | { kind: 'pending' }
-  | { kind: 'success' }
-  | { kind: 'error' };
+  { kind: 'idle' } | { kind: 'pending' } | { kind: 'success' } | { kind: 'error' };
 
 /** Tempo até limpar feedback de sucesso/erro (acessível, sem sumir imediato). */
 export const MANUAL_FEEDBACK_CLEAR_MS = 5000;

@@ -69,11 +69,11 @@ describe('GetInternetStatusService', () => {
 
   it('tries DNS TCP/53 then TCP/443 when the first fallback port fails', async () => {
     const tcpReachability: TcpReachabilityPort = {
-      probe: vi.fn().mockImplementation(async (_host, port) =>
-        port === 443
-          ? { ok: true, latencyMs: 31 }
-          : { ok: false, latencyMs: null },
-      ),
+      probe: vi
+        .fn()
+        .mockImplementation(async (_host, port) =>
+          port === 443 ? { ok: true, latencyMs: 31 } : { ok: false, latencyMs: null },
+        ),
     };
     const service = new GetInternetStatusService(
       clock,
@@ -87,16 +87,8 @@ describe('GetInternetStatusService', () => {
       latencyMs: 31,
       quality: 'tcp_rtt',
     });
-    expect(tcpReachability.probe).toHaveBeenNthCalledWith(
-      1,
-      DEFAULT_INTERNET_SECONDARY_HOST,
-      53,
-    );
-    expect(tcpReachability.probe).toHaveBeenNthCalledWith(
-      2,
-      DEFAULT_INTERNET_SECONDARY_HOST,
-      443,
-    );
+    expect(tcpReachability.probe).toHaveBeenNthCalledWith(1, DEFAULT_INTERNET_SECONDARY_HOST, 53);
+    expect(tcpReachability.probe).toHaveBeenNthCalledWith(2, DEFAULT_INTERNET_SECONDARY_HOST, 443);
   });
 
   it('keeps ICMP timeout when TCP fallback also fails', async () => {

@@ -46,7 +46,7 @@ HTMLCanvasElement.prototype.getContext = vi.fn().mockImplementation(() => {
       },
     },
   );
-}) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+});
 
 afterEach(() => {
   cleanup();

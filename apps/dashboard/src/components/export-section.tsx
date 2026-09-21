@@ -44,7 +44,11 @@ export function ExportSection() {
           </label>
           <div className="group">
             <h3>Período</h3>
-            <label className="field-row" htmlFor="exp-period" style={{ gridTemplateColumns: '1fr' }}>
+            <label
+              className="field-row"
+              htmlFor="exp-period"
+              style={{ gridTemplateColumns: '1fr' }}
+            >
               <select id="exp-period" className="filter" disabled>
                 <option>Últimas 24 horas</option>
                 <option>Últimos 7 dias</option>

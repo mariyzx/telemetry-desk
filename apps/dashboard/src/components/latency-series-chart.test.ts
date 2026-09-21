@@ -38,9 +38,7 @@ describe('resolveLatencyPlotWindow', () => {
     expect(resolved.endEpochMs - resolved.startEpochMs).toBeGreaterThanOrEqual(
       LATENCY_PLOT_MIN_VISIBLE_MS,
     );
-    expect(resolved.endEpochMs - resolved.startEpochMs).toBeLessThan(
-      LATENCY_PLOT_TARGET_WINDOW_MS,
-    );
+    expect(resolved.endEpochMs - resolved.startEpochMs).toBeLessThan(LATENCY_PLOT_TARGET_WINDOW_MS);
   });
 
   it('floors adaptive span at 60 seconds for very fresh history', () => {

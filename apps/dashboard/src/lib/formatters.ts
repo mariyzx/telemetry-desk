@@ -1,20 +1,9 @@
 export type ProbeQuality =
-  | 'ok'
-  | 'timeout'
-  | 'permission_denied'
-  | 'unsupported'
-  | 'unavailable'
-  | 'reachable'
-  | 'tcp_rtt';
+  'ok' | 'timeout' | 'permission_denied' | 'unsupported' | 'unavailable' | 'reachable' | 'tcp_rtt';
 
 export type TracePointOrigin = 'manual' | 'automatic';
 
-export type TracePointState =
-  | 'candidate'
-  | 'observing'
-  | 'confirmed'
-  | 'recovering'
-  | 'finalized';
+export type TracePointState = 'candidate' | 'observing' | 'confirmed' | 'recovering' | 'finalized';
 
 export function formatProbeQuality(quality: ProbeQuality): string {
   switch (quality) {
@@ -92,8 +81,6 @@ export function formatTriggerKind(
   }
 }
 
-export function countEnabledCapabilities(
-  capabilities: Record<string, boolean>,
-): number {
+export function countEnabledCapabilities(capabilities: Record<string, boolean>): number {
   return Object.values(capabilities).filter(Boolean).length;
 }
