@@ -85,4 +85,5 @@ export interface MetricRepository {
     sinceEpochMs: number;
     targetRoles: readonly NetworkTargetRole[];
   }): Promise<NetworkSample[]>;
+  deleteNetworkSamplesBefore(cutoffEpochMs: number): Promise<number>;
 }

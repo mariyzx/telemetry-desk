@@ -32,6 +32,109 @@ afterEach(async () => {
 });
 
 describe('runCollector persistence composition', () => {
+  it('schedules retention independently and reports its deleted count', async () => {
+    const pipe = createMemoryStdio();
+    let monotonic = 0;
+    const timers = new Map<number, { due: number; fn: () => void }>();
+    let nextTimerId = 1;
+    const applyRetention = vi.fn().mockResolvedValue(7);
+    const onRetentionApplied = vi.fn();
+    const stop = runCollector({
+      stdin: pipe.parentToChild as unknown as Readable,
+      stdout: pipe.childToParent as unknown as Writable,
+      clock: { nowEpochMs: () => 0, monotonicMs: () => monotonic },
+      gatewayStatus: { execute: vi.fn() },
+      applyRetention,
+      onRetentionApplied,
+      retentionIntervalMs: 10_000,
+      heartbeatIntervalMs: 60_000,
+      setIntervalFn: () => 99,
+      clearIntervalFn: vi.fn(),
+      setTimeoutFn: (fn, ms) => {
+        const id = nextTimerId++;
+        timers.set(id, { due: monotonic + ms, fn });
+        return id;
+      },
+      clearTimeoutFn: (id) => {
+        timers.delete(id);
+      },
+    });
+
+    expect(applyRetention).not.toHaveBeenCalled();
+    const timer = [...timers.values()].find((entry) => entry.due === 10_000);
+    expect(timer).toBeDefined();
+    monotonic = 10_000;
+    timer?.fn();
+    await flushPromises();
+
+    expect(applyRetention).toHaveBeenCalledTimes(1);
+    expect(onRetentionApplied).toHaveBeenCalledWith(7);
+    stop();
+  });
+
+  it('reports retention failures through onError without an unhandled rejection', async () => {
+    const pipe = createMemoryStdio();
+    let retentionTimer: (() => void) | undefined;
+    const error = new Error('database busy');
+    const onError = vi.fn();
+    const stop = runCollector({
+      stdin: pipe.parentToChild as unknown as Readable,
+      stdout: pipe.childToParent as unknown as Writable,
+      clock: { nowEpochMs: () => 0, monotonicMs: () => 0 },
+      gatewayStatus: { execute: vi.fn() },
+      applyRetention: vi.fn().mockRejectedValue(error),
+      retentionIntervalMs: 1,
+      heartbeatIntervalMs: 60_000,
+      setIntervalFn: () => 99,
+      clearIntervalFn: vi.fn(),
+      setTimeoutFn: (fn) => {
+        retentionTimer = fn;
+        return 1;
+      },
+      clearTimeoutFn: vi.fn(),
+      onError,
+    });
+
+    retentionTimer?.();
+    await flushPromises();
+
+    expect(onError).toHaveBeenCalledWith('network sample retention failed', error);
+    stop();
+  });
+
+  it('runs retention and persistence flush independently when due together', async () => {
+    const pipe = createMemoryStdio();
+    const timers: Array<() => void> = [];
+    const persistenceFlush = vi.fn().mockResolvedValue(undefined);
+    const applyRetention = vi.fn().mockResolvedValue(0);
+    const stop = runCollector({
+      stdin: pipe.parentToChild as unknown as Readable,
+      stdout: pipe.childToParent as unknown as Writable,
+      clock: { nowEpochMs: () => 0, monotonicMs: () => 0 },
+      gatewayStatus: { execute: vi.fn() },
+      persistenceFlush,
+      applyRetention,
+      persistenceFlushIntervalMs: 10,
+      retentionIntervalMs: 10,
+      heartbeatIntervalMs: 60_000,
+      setIntervalFn: () => 99,
+      clearIntervalFn: vi.fn(),
+      setTimeoutFn: (fn) => {
+        timers.push(fn);
+        return timers.length;
+      },
+      clearTimeoutFn: vi.fn(),
+      onRetentionApplied: vi.fn(),
+    });
+
+    for (const timer of timers.slice()) timer();
+    await flushPromises();
+
+    expect(persistenceFlush).toHaveBeenCalledTimes(1);
+    expect(applyRetention).toHaveBeenCalledTimes(1);
+    stop();
+  });
+
   it('records gateway samples into the ring buffer and flushes batches to SQLite', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'telemetry-collector-db-'));
     tempDirs.push(dir);
@@ -136,6 +239,12 @@ describe('runCollector persistence composition', () => {
     }
   });
 });
+
+async function flushPromises(): Promise<void> {
+  for (let index = 0; index < 10; index += 1) {
+    await Promise.resolve();
+  }
+}
 
 function createMemoryStdio(): {
   parentToChild: MemoryStream;

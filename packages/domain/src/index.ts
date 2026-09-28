@@ -2,6 +2,7 @@ export type { PlatformCapabilities } from './capabilities/platform-capabilities.
 export type { ProbeQuality } from './diagnostics/probe-quality.js';
 export { isMeasurableProbeQuality } from './diagnostics/probe-quality.js';
 export { GATEWAY_RING_BUFFER_CAPACITY, RingBuffer } from './metrics/ring-buffer.js';
+export { NETWORK_SAMPLE_RETENTION_MS } from './metrics/retention.js';
 export type {
   CreateManualTracePointInput,
   ProtectedMetricRange,

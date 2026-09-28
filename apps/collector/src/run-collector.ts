@@ -23,6 +23,7 @@ const DEFAULT_GATEWAY_SAMPLE_INTERVAL_MS = 1_000;
 const DEFAULT_INTERNET_SAMPLE_INTERVAL_MS = 1_000;
 const DEFAULT_PERSISTENCE_FLUSH_INTERVAL_MS = 2_000;
 const DEFAULT_TRACE_POINT_FINALIZE_INTERVAL_MS = 5_000;
+const DEFAULT_RETENTION_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 export interface RunCollectorOptions {
   stdin: Readable;
@@ -46,11 +47,14 @@ export interface RunCollectorOptions {
     maxPointsPerRole: number;
   }) => Promise<NetworkSamplePoint[]>;
   finalizeOpenTracePoints?: () => void | Promise<void>;
+  applyRetention?: () => number | Promise<number>;
+  onRetentionApplied?: (deletedCount: number) => void;
   heartbeatIntervalMs?: number;
   gatewaySampleIntervalMs?: number;
   internetSampleIntervalMs?: number;
   persistenceFlushIntervalMs?: number;
   tracePointFinalizeIntervalMs?: number;
+  retentionIntervalMs?: number;
   setIntervalFn?: (fn: () => void, ms: number) => number;
   clearIntervalFn?: (id: number) => void;
   setTimeoutFn?: (fn: () => void, ms: number) => number;
@@ -69,6 +73,7 @@ export function runCollector(options: RunCollectorOptions): () => void {
     options.persistenceFlushIntervalMs ?? DEFAULT_PERSISTENCE_FLUSH_INTERVAL_MS;
   const tracePointFinalizeIntervalMs =
     options.tracePointFinalizeIntervalMs ?? DEFAULT_TRACE_POINT_FINALIZE_INTERVAL_MS;
+  const retentionIntervalMs = options.retentionIntervalMs ?? DEFAULT_RETENTION_INTERVAL_MS;
   const setIntervalFn =
     options.setIntervalFn ?? ((fn, ms) => setInterval(fn, ms) as unknown as number);
   const clearIntervalFn =
@@ -217,6 +222,27 @@ export function runCollector(options: RunCollectorOptions): () => void {
         })
       : () => undefined;
 
+  const stopRetention =
+    typeof options.applyRetention === 'function'
+      ? startMonotonicInterval({
+          clock: options.clock,
+          intervalMs: retentionIntervalMs,
+          leading: false,
+          onTick: async () => {
+            try {
+              const deletedCount = await options.applyRetention?.();
+              if (deletedCount !== undefined) {
+                (options.onRetentionApplied ?? console.info)(deletedCount);
+              }
+            } catch (error) {
+              (options.onError ?? console.error)('network sample retention failed', error);
+            }
+          },
+          setTimeoutFn,
+          clearTimeoutFn,
+        })
+      : () => undefined;
+
   const stopTracePointFinalize =
     typeof options.finalizeOpenTracePoints === 'function'
       ? startMonotonicInterval({
@@ -235,6 +261,7 @@ export function runCollector(options: RunCollectorOptions): () => void {
     stopGatewaySampling();
     stopInternetSampling();
     stopPersistenceFlush();
+    stopRetention();
     stopTracePointFinalize();
     clearIntervalFn(heartbeatTimer);
     lineListeners.clear();

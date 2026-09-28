@@ -38,7 +38,7 @@ Arquitetura em camadas: `domain` não depende de nada, `application` define port
 
 **Coleta** — o `collector` roda como processo filho supervisionado pelo Electron main, comunicando por NDJSON sobre stdin/stdout. Sonda o gateway a cada 1s e alterna entre dois hosts públicos para cobertura efetiva de ~1s da internet. Quando o ICMP dá timeout, há fallback de TCP connect (portas típicas 53 e 443); esse RTT é marcado como `tcp_rtt` e nunca apresentado como latência ICMP.
 
-**Persistência** — amostras entram num `RingBuffer` em memória e são drenadas por uma fila para SQLite a cada 2s. Banco em `~/.telemetry-desk/telemetry.sqlite` (sobrescrevível por `TELEMETRY_DESK_DB_PATH`). Tabelas: `network_samples`, `trace_points`, `trace_point_evidence`, `protected_metric_ranges`.
+**Persistência** — amostras entram num `RingBuffer` em memória e são drenadas por uma fila para SQLite a cada 2s. Banco em `~/.telemetry-desk/telemetry.sqlite` (sobrescrevível por `TELEMETRY_DESK_DB_PATH`). Tabelas: `network_samples`, `trace_points`, `trace_point_evidence`, `protected_metric_ranges`. Amostras com mais de 30 dias são removidas periodicamente, exceto nas faixas inclusivas protegidas por TracePoints. O expurgo não executa `VACUUM`: libera páginas para reuso pelo SQLite, mas não reduz imediatamente o arquivo.
 
 **Detecção** — quatro gatilhos sobre a janela recente do gateway: `drop` (3 falhas consecutivas), `loss` (>20% em 10s), `latency` (2× baseline + 40ms, ou 100ms absoluto quando não há baseline suficiente) e `jitter` (>30ms). Baseline é a mediana de 15min com mínimo de 60 amostras.
 
