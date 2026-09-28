@@ -1,5 +1,7 @@
 # TelemetryDesk
 
+[![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/mariyzx/telemetry-desk?utm_source=oss&utm_medium=github&utm_campaign=mariyzx%2Ftelemetry-desk&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)](https://coderabbit.ai)
+
 TelemetryDesk é um aplicativo desktop local e privacy-first: acompanha rede e recursos do computador para ajudar a distinguir lentidão da máquina, do Wi-Fi, do provedor ou da rota externa. Os dados ficam no dispositivo — sem conta, cloud ou telemetria externa.
 
 ## Requisitos
