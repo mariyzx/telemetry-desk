@@ -67,7 +67,9 @@ void app.whenReady().then(async () => {
   const mainWindow = createMainWindow({
     BrowserWindow,
     preloadPath: join(directory, '../preload/preload.js'),
-    dashboardPath: join(directory, '../../../dashboard/dist/index.html'),
+    dashboardPath: app.isPackaged
+      ? join(process.resourcesPath, 'dashboard/dist/index.html')
+      : join(directory, '../../../dashboard/dist/index.html'),
     devServerUrl: process.env['VITE_DEV_SERVER_URL'],
     isQuitting: () => lifecycle.isQuitting(),
   });

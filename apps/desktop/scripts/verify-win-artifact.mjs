@@ -16,6 +16,7 @@ const runtimeModules = [
 ];
 
 await access(join(resources, 'app.asar'));
+await access(join(resources, 'dashboard/dist/index.html'));
 await access(collectorEntry);
 
 const requireFromCollector = createRequire(collectorEntry);
