@@ -5,7 +5,16 @@ directories:
 files:
   - dist/**/*
   - assets/**/*
-  - ../dashboard/dist/**/*
+extraResources:
+  - from: ../dashboard/dist
+    to: dashboard/dist
+    filter:
+      - '**/*'
+asarUnpack:
+  - node_modules/@telemetry-desk/collector/**/*
+  - node_modules/@telemetry-desk/{application,domain,infrastructure,platform,shared}/**/*
+  - node_modules/drizzle-orm/**/*
+  - node_modules/zod/**/*
 win:
   target:
     - target: nsis

@@ -30,10 +30,21 @@ const collectorSupervisor = createCollectorSupervisor({
   spawn: () =>
     spawnCollectorChild({
       databasePath: resolveCollectorDatabasePath(app.getPath('userData')),
+      packaged: app.isPackaged,
+      resourcesPath: process.resourcesPath,
     }),
   clock,
   createId: () => randomUUID(),
 });
+
+if (process.env['TELEMETRY_DESK_E2E'] === '1') {
+  Object.defineProperty(globalThis, '__telemetryDeskCollectorHealth', {
+    value: () => collectorSupervisor.getHealth(),
+    configurable: false,
+    enumerable: false,
+    writable: false,
+  });
+}
 
 registerRuntimeIpc(ipcMain, runtimeStatusService);
 registerGatewayIpc(ipcMain, {
@@ -56,7 +67,9 @@ void app.whenReady().then(async () => {
   const mainWindow = createMainWindow({
     BrowserWindow,
     preloadPath: join(directory, '../preload/preload.js'),
-    dashboardPath: join(directory, '../../../dashboard/dist/index.html'),
+    dashboardPath: app.isPackaged
+      ? join(process.resourcesPath, 'dashboard/dist/index.html')
+      : join(directory, '../../../dashboard/dist/index.html'),
     devServerUrl: process.env['VITE_DEV_SERVER_URL'],
     isQuitting: () => lifecycle.isQuitting(),
   });
