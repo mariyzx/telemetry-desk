@@ -8,9 +8,12 @@ import {
 } from './spawn-collector.js';
 
 it('resolves the collector child entry in development', () => {
-  expect(resolveCollectorEntryPath('/repo/apps/desktop/dist/main', '/resources', false)).toBe(
-    '/repo/apps/collector/dist/main.js',
-  );
+  expect(
+    resolveCollectorEntryPath('/repo/apps/desktop/dist/main', '/resources', false).replaceAll(
+      '\\',
+      '/',
+    ),
+  ).toBe('/repo/apps/collector/dist/main.js');
 });
 
 it('resolves the unpacked collector child entry in production', () => {
