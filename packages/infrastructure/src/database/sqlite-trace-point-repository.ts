@@ -1,5 +1,6 @@
 import { desc, eq, inArray, ne } from 'drizzle-orm';
 import type { TracePointRepository } from '@telemetry-desk/application';
+import { APP_ERROR_CODES, AppError, type AppErrorCode } from '@telemetry-desk/shared';
 import type {
   TracePoint,
   TracePointEvidence,
@@ -10,112 +11,130 @@ import type {
 import type { TelemetryDatabase } from './open-sqlite-database.js';
 import { protectedMetricRanges, tracePointEvidence, tracePoints } from './schema.js';
 
+function storage<T>(code: AppErrorCode, operation: () => T): T {
+  try {
+    return operation();
+  } catch (cause) {
+    throw new AppError('sqlite-trace-points', code, 'trace point storage failed', { cause });
+  }
+}
+
 export class SqliteTracePointRepository implements TracePointRepository {
   constructor(private readonly database: TelemetryDatabase) {}
 
   save(tracePoint: TracePoint): Promise<void> {
     const createdAtEpochMs = tracePoint.triggeredAtEpochMs;
 
-    this.database.db.transaction((tx) => {
-      tx.insert(tracePoints)
-        .values({
-          id: tracePoint.id,
-          origin: tracePoint.origin,
-          state: tracePoint.state,
-          triggerKind: tracePoint.triggerKind,
-          triggeredAtEpochMs: tracePoint.triggeredAtEpochMs,
-          startedAtEpochMs: tracePoint.startedAtEpochMs,
-          endedAtEpochMs: tracePoint.endedAtEpochMs,
-          severity: tracePoint.severity,
-          cause: tracePoint.cause,
-          confidence: tracePoint.confidence,
-          explanationCode: tracePoint.explanationCode,
-          preWindowStartEpochMs: tracePoint.preWindowStartEpochMs,
-          postWindowEndEpochMs: tracePoint.postWindowEndEpochMs,
-          createdAtEpochMs,
-        })
-        .run();
-
-      for (const evidence of tracePoint.evidence) {
-        tx.insert(tracePointEvidence)
+    storage(APP_ERROR_CODES.storageWriteFailed, () =>
+      this.database.db.transaction((tx) => {
+        tx.insert(tracePoints)
           .values({
-            id: evidence.id,
-            tracePointId: tracePoint.id,
-            evidenceType: evidence.type,
-            targetRole: evidence.targetRole,
-            observedValue: evidence.observedValue,
-            baselineValue: evidence.baselineValue,
-            unit: evidence.unit,
-            weight: evidence.weight,
+            id: tracePoint.id,
+            origin: tracePoint.origin,
+            state: tracePoint.state,
+            triggerKind: tracePoint.triggerKind,
+            triggeredAtEpochMs: tracePoint.triggeredAtEpochMs,
+            startedAtEpochMs: tracePoint.startedAtEpochMs,
+            endedAtEpochMs: tracePoint.endedAtEpochMs,
+            severity: tracePoint.severity,
+            cause: tracePoint.cause,
+            confidence: tracePoint.confidence,
+            explanationCode: tracePoint.explanationCode,
+            preWindowStartEpochMs: tracePoint.preWindowStartEpochMs,
+            postWindowEndEpochMs: tracePoint.postWindowEndEpochMs,
             createdAtEpochMs,
           })
           .run();
-      }
 
-      for (const range of tracePoint.protectedRanges) {
-        tx.insert(protectedMetricRanges)
-          .values({
-            id: range.id,
-            tracePointId: tracePoint.id,
-            startEpochMs: range.startEpochMs,
-            endEpochMs: range.endEpochMs,
-          })
-          .run();
-      }
-    });
+        for (const evidence of tracePoint.evidence) {
+          tx.insert(tracePointEvidence)
+            .values({
+              id: evidence.id,
+              tracePointId: tracePoint.id,
+              evidenceType: evidence.type,
+              targetRole: evidence.targetRole,
+              observedValue: evidence.observedValue,
+              baselineValue: evidence.baselineValue,
+              unit: evidence.unit,
+              weight: evidence.weight,
+              createdAtEpochMs,
+            })
+            .run();
+        }
+
+        for (const range of tracePoint.protectedRanges) {
+          tx.insert(protectedMetricRanges)
+            .values({
+              id: range.id,
+              tracePointId: tracePoint.id,
+              startEpochMs: range.startEpochMs,
+              endEpochMs: range.endEpochMs,
+            })
+            .run();
+        }
+      }),
+    );
 
     return Promise.resolve();
   }
 
   update(tracePoint: TracePoint): Promise<void> {
-    this.database.db.transaction((tx) => {
-      tx.update(tracePoints)
-        .set({
-          state: tracePoint.state,
-          endedAtEpochMs: tracePoint.endedAtEpochMs,
-          severity: tracePoint.severity,
-          cause: tracePoint.cause,
-          confidence: tracePoint.confidence,
-          explanationCode: tracePoint.explanationCode,
-          postWindowEndEpochMs: tracePoint.postWindowEndEpochMs,
-        })
-        .where(eq(tracePoints.id, tracePoint.id))
-        .run();
-
-      for (const range of tracePoint.protectedRanges) {
-        tx.update(protectedMetricRanges)
+    storage(APP_ERROR_CODES.storageWriteFailed, () =>
+      this.database.db.transaction((tx) => {
+        tx.update(tracePoints)
           .set({
-            startEpochMs: range.startEpochMs,
-            endEpochMs: range.endEpochMs,
+            state: tracePoint.state,
+            endedAtEpochMs: tracePoint.endedAtEpochMs,
+            severity: tracePoint.severity,
+            cause: tracePoint.cause,
+            confidence: tracePoint.confidence,
+            explanationCode: tracePoint.explanationCode,
+            postWindowEndEpochMs: tracePoint.postWindowEndEpochMs,
           })
-          .where(eq(protectedMetricRanges.id, range.id))
+          .where(eq(tracePoints.id, tracePoint.id))
           .run();
-      }
-    });
+
+        for (const range of tracePoint.protectedRanges) {
+          tx.update(protectedMetricRanges)
+            .set({
+              startEpochMs: range.startEpochMs,
+              endEpochMs: range.endEpochMs,
+            })
+            .where(eq(protectedMetricRanges.id, range.id))
+            .run();
+        }
+      }),
+    );
 
     return Promise.resolve();
   }
 
   async listRecent(limit: number): Promise<TracePoint[]> {
-    const rows = this.database.db
-      .select()
-      .from(tracePoints)
-      .orderBy(desc(tracePoints.triggeredAtEpochMs))
-      .limit(limit)
-      .all();
-
-    return Promise.resolve(this.hydrate(rows));
+    return Promise.resolve(
+      storage(APP_ERROR_CODES.storageReadFailed, () => {
+        const rows = this.database.db
+          .select()
+          .from(tracePoints)
+          .orderBy(desc(tracePoints.triggeredAtEpochMs))
+          .limit(limit)
+          .all();
+        return this.hydrate(rows);
+      }),
+    );
   }
 
   async listOpen(): Promise<TracePoint[]> {
-    const rows = this.database.db
-      .select()
-      .from(tracePoints)
-      .where(ne(tracePoints.state, 'finalized'))
-      .orderBy(desc(tracePoints.triggeredAtEpochMs))
-      .all();
-
-    return Promise.resolve(this.hydrate(rows));
+    return Promise.resolve(
+      storage(APP_ERROR_CODES.storageReadFailed, () => {
+        const rows = this.database.db
+          .select()
+          .from(tracePoints)
+          .where(ne(tracePoints.state, 'finalized'))
+          .orderBy(desc(tracePoints.triggeredAtEpochMs))
+          .all();
+        return this.hydrate(rows);
+      }),
+    );
   }
 
   private hydrate(rows: Array<typeof tracePoints.$inferSelect>): TracePoint[] {

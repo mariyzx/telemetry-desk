@@ -9,6 +9,36 @@ import {
 import { runCollector } from './run-collector.js';
 
 describe('runCollector gateway sampling', () => {
+  it('reports persistence flush failures without an unhandled rejection', async () => {
+    const pipe = createMemoryStdio();
+    const onError = vi.fn();
+    let flushTimer: (() => void) | undefined;
+    const stop = runCollector({
+      stdin: pipe.parentToChild as unknown as Readable,
+      stdout: pipe.childToParent as unknown as Writable,
+      clock: { nowEpochMs: () => 0, monotonicMs: () => 0 },
+      gatewayStatus: { execute: vi.fn() },
+      persistenceFlush: vi.fn().mockRejectedValue(new Error('disk full')),
+      persistenceFlushIntervalMs: 1,
+      heartbeatIntervalMs: 60_000,
+      setTimeoutFn: (fn) => {
+        flushTimer = fn;
+        return 1;
+      },
+      clearTimeoutFn: vi.fn(),
+      onError,
+    });
+
+    flushTimer?.();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(onError).toHaveBeenCalledWith(
+      'network sample persistence flush failed',
+      expect.objectContaining({ message: 'disk full' }),
+    );
+    stop();
+  });
   it('samples gateway on a ~1s monotonic cadence and serves get-gateway-status from cache', async () => {
     const pipe = createMemoryStdio();
     const clock = { nowEpochMs: () => 1_700_000_000_000, monotonicMs: () => monotonic };

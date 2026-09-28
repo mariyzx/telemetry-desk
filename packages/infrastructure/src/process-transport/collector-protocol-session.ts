@@ -1,4 +1,5 @@
 import {
+  APP_ERROR_CODES,
   AppError,
   COLLECTOR_COMMANDS,
   COLLECTOR_EVENTS,
@@ -56,7 +57,7 @@ export class CollectorProtocolClient {
     if (!isAllowlistedCollectorCommand(command)) {
       throw new AppError(
         'collector-command',
-        'COLLECTOR_COMMAND_REJECTED',
+        APP_ERROR_CODES.collectorCommandRejected,
         'command not allowlisted',
       );
     }
@@ -72,7 +73,7 @@ export class CollectorProtocolClient {
     return await new Promise<unknown>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
-        reject(new AppError(id, 'COLLECTOR_TIMEOUT', 'collector request timed out'));
+        reject(new AppError(id, APP_ERROR_CODES.collectorTimeout, 'collector request timed out'));
       }, this.requestTimeoutMs);
 
       this.pending.set(id, { resolve, reject, timer });
@@ -158,7 +159,7 @@ export class CollectorProtocolHost {
     if (!handler) {
       this.writeError(parsed.data.id, {
         id: parsed.data.id,
-        code: 'COLLECTOR_HANDLER_MISSING',
+        code: APP_ERROR_CODES.collectorHandlerMissing,
         message: `no handler for ${parsed.data.command}`,
       });
       return;
@@ -208,14 +209,14 @@ function serializeHostError(error: unknown): SerializedAppError {
   if (error instanceof Error) {
     return {
       id: 'collector-handler',
-      code: 'COLLECTOR_HANDLER_FAILED',
+      code: APP_ERROR_CODES.collectorHandlerFailed,
       message: error.message,
     };
   }
 
   return {
     id: 'collector-handler',
-    code: 'COLLECTOR_HANDLER_FAILED',
+    code: APP_ERROR_CODES.collectorHandlerFailed,
     message: 'unknown collector handler failure',
   };
 }
