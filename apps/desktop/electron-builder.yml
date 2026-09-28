@@ -6,6 +6,11 @@ files:
   - dist/**/*
   - assets/**/*
   - ../dashboard/dist/**/*
+asarUnpack:
+  - node_modules/@telemetry-desk/collector/**/*
+  - node_modules/@telemetry-desk/{application,domain,infrastructure,platform,shared}/**/*
+  - node_modules/drizzle-orm/**/*
+  - node_modules/zod/**/*
 win:
   target:
     - target: nsis

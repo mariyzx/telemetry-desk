@@ -10,11 +10,14 @@
     "dev": "npm run build --prefix ../.. && node ./scripts/dev.mjs",
     "build": "tsc -p tsconfig.json && tsc -p tsconfig.preload.json",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.preload.json --noEmit",
-    "dist:win": "npm run build -w @telemetry-desk/dashboard && npm run build && electron-builder --win nsis --x64 --publish never --config electron-builder.yml",
+    "dist:win": "npm run build --prefix ../.. && electron-builder --win nsis --x64 --publish never --config electron-builder.yml",
+    "verify:win-artifact": "node ./scripts/verify-win-artifact.mjs",
+    "e2e:win-unpacked": "playwright test --config=e2e/playwright.config.ts e2e/win-unpacked.spec.ts",
     "e2e:screenshots": "npm run build -w @telemetry-desk/dashboard && npm run build && playwright test --config=e2e/playwright.config.ts"
   },
   "dependencies": {
     "@telemetry-desk/application": "^0.1.0",
+    "@telemetry-desk/collector": "^0.1.0",
     "@telemetry-desk/infrastructure": "^0.1.0",
     "@telemetry-desk/platform": "^0.1.0",
     "@telemetry-desk/shared": "^0.1.0"

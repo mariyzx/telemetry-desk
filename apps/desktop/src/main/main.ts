@@ -30,10 +30,21 @@ const collectorSupervisor = createCollectorSupervisor({
   spawn: () =>
     spawnCollectorChild({
       databasePath: resolveCollectorDatabasePath(app.getPath('userData')),
+      packaged: app.isPackaged,
+      resourcesPath: process.resourcesPath,
     }),
   clock,
   createId: () => randomUUID(),
 });
+
+if (process.env['TELEMETRY_DESK_E2E'] === '1') {
+  Object.defineProperty(globalThis, '__telemetryDeskCollectorHealth', {
+    value: () => collectorSupervisor.getHealth(),
+    configurable: false,
+    enumerable: false,
+    writable: false,
+  });
+}
 
 registerRuntimeIpc(ipcMain, runtimeStatusService);
 registerGatewayIpc(ipcMain, {

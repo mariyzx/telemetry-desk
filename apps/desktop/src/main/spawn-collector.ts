@@ -1,12 +1,18 @@
-import { spawn } from 'node:child_process';
+import { spawn, type SpawnOptions } from 'node:child_process';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { CollectorChildProcess } from './collector-supervisor.js';
 
 const directory = fileURLToPath(new URL('.', import.meta.url));
 
-export function resolveCollectorEntryPath(): string {
-  return join(directory, '../../../collector/dist/main.js');
+export function resolveCollectorEntryPath(
+  baseDirectory: string = directory,
+  resourcesPath: string = process.resourcesPath,
+  packaged = false,
+): string {
+  return packaged
+    ? join(resourcesPath, 'app.asar.unpacked/node_modules/@telemetry-desk/collector/dist/main.js')
+    : join(baseDirectory, '../../../collector/dist/main.js');
 }
 
 export function resolveCollectorDatabasePath(userDataPath: string): string {
@@ -17,21 +23,27 @@ export interface SpawnCollectorChildOptions {
   entryPath?: string;
   execPath?: string;
   databasePath?: string;
+  packaged?: boolean;
+  resourcesPath?: string;
+  spawn?: typeof spawn;
 }
 
 export function spawnCollectorChild(
   options: SpawnCollectorChildOptions = {},
 ): CollectorChildProcess {
-  const entryPath = options.entryPath ?? resolveCollectorEntryPath();
+  const entryPath =
+    options.entryPath ??
+    resolveCollectorEntryPath(directory, options.resourcesPath, options.packaged);
   const execPath = options.execPath ?? process.execPath;
-  const child = spawn(execPath, [entryPath], {
+  const spawnProcess = options.spawn ?? spawn;
+  const child = spawnProcess(execPath, [entryPath], {
     env: {
       ...process.env,
       ELECTRON_RUN_AS_NODE: '1',
       ...(options.databasePath ? { TELEMETRY_DESK_DB_PATH: options.databasePath } : {}),
     },
     stdio: ['pipe', 'pipe', 'inherit'],
-  });
+  } satisfies SpawnOptions);
 
   if (!child.stdin || !child.stdout) {
     child.kill();
