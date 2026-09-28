@@ -17,7 +17,14 @@ function point(
   latencyMs: number | null,
   targetRole: 'gateway' | 'internet' = 'gateway',
 ): NetworkSamplePoint {
-  return { observedAtEpochMs, targetRole, latencyMs };
+  return {
+    observedAtEpochMs,
+    targetRole,
+    latencyMs,
+    sent: 1,
+    received: latencyMs === null ? 0 : 1,
+    quality: latencyMs === null ? 'timeout' : 'ok',
+  };
 }
 
 describe('resolveLatencyPlotWindow', () => {

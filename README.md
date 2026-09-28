@@ -48,7 +48,7 @@ Arquitetura em camadas: `domain` não depende de nada, `application` define port
 
 ## Estado atual
 
-Funcionais: Início (status ao vivo, caminho da conexão, gráficos de latência), TracePoints (criação manual, listagem, diagnóstico) e Técnico.
+Funcionais: Início (estado derivado da medição atual, caminho da conexão e histórico real dos últimos 15 minutos), TracePoints (criação manual, listagem, diagnóstico) e Técnico. A tela distingue carregamento, ausência ou insuficiência de evidência, estabilidade, degradação e erro; nunca trata falta de dados como saúde.
 
 Placeholders: Configurações e Exportar são maquetes visuais com controles desabilitados.
 

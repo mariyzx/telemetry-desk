@@ -9,6 +9,9 @@ it('validates network sample list IPC while preserving correlation id', async ()
       observedAtEpochMs: 1_700_000_000_000,
       targetRole: 'gateway' as const,
       latencyMs: 12,
+      sent: 1,
+      received: 1,
+      quality: 'ok' as const,
     },
   ];
 

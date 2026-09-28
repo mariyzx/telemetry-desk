@@ -27,6 +27,9 @@ describe('network sample series contracts', () => {
       observedAtEpochMs: 1_700_000_000_500,
       targetRole: 'gateway',
       latencyMs: 12.5,
+      sent: 1,
+      received: 1,
+      quality: 'ok',
     });
     expect(point.latencyMs).toBe(12.5);
 
@@ -39,6 +42,9 @@ describe('network sample series contracts', () => {
             observedAtEpochMs: 1_700_000_001_000,
             targetRole: 'internet',
             latencyMs: null,
+            sent: 1,
+            received: 0,
+            quality: 'timeout',
           },
         ],
       },

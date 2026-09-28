@@ -1,3 +1,9 @@
+import {
+  assessConnectionStability,
+  isMeasurableProbeQuality,
+  type ConnectionStability,
+  type ProbeQuality,
+} from '@telemetry-desk/domain';
 import type { TracePointSummary } from '@telemetry-desk/shared';
 import type { GatewayStatusState } from '../hooks/use-gateway-status.js';
 import type { InternetStatusState } from '../hooks/use-internet-status.js';
@@ -25,14 +31,57 @@ export interface HomeSectionProps {
   createBusy: boolean;
 }
 
-function pathNodeClassName(kind: 'loading' | 'success' | 'error' | 'idle'): string {
-  if (kind === 'loading') {
-    return 'path-node path-node--loading';
+const STABILITY_COPY: Record<ConnectionStability, { title: string; detail: string }> = {
+  stable: {
+    title: 'Sua conexão está estável',
+    detail:
+      'As amostras do gateway local nos últimos 15 minutos estão dentro dos limites esperados.',
+  },
+  degraded: {
+    title: 'Sua conexão apresenta degradação',
+    detail:
+      'As amostras do gateway local nos últimos 15 minutos indicam queda, perda, latência ou jitter.',
+  },
+  insufficient_evidence: {
+    title: 'Medição de estabilidade indisponível',
+    detail: 'O gateway local não forneceu evidência mensurável suficiente nos últimos 15 minutos.',
+  },
+  no_evidence: {
+    title: 'Aguardando evidências da conexão',
+    detail: 'A estabilidade será avaliada após o histórico receber amostras do gateway local.',
+  },
+};
+
+type PathNodeState = 'loading' | 'available' | 'unavailable';
+
+function pathNodeClassName(state: PathNodeState): string {
+  return state === 'available' ? 'path-node' : `path-node path-node--${state}`;
+}
+
+function probeNodeState(quality: ProbeQuality): PathNodeState {
+  return isMeasurableProbeQuality(quality) ? 'available' : 'unavailable';
+}
+
+function seriesStability(
+  series: NetworkSampleSeriesState,
+  nowEpochMs: number,
+): ConnectionStability {
+  if (series.kind === 'loading' || series.kind === 'empty' || series.kind === 'error') {
+    return 'no_evidence';
   }
-  if (kind === 'error') {
-    return 'path-node path-node--unavailable';
-  }
-  return 'path-node';
+
+  return assessConnectionStability(
+    series.points
+      .filter((point) => point.targetRole === 'gateway')
+      .map(({ observedAtEpochMs, latencyMs, sent, received, quality }) => ({
+        observedAtEpochMs,
+        latencyMs,
+        sent,
+        received,
+        quality,
+      })),
+    nowEpochMs,
+  );
 }
 
 function HistoryChart({
@@ -117,8 +166,9 @@ export function HomeSection({
   onCreateTracePoint,
   createBusy,
 }: HomeSectionProps) {
-  const sensors =
-    runtime.kind === 'success' ? `${countEnabledCapabilities(runtime.data.capabilities)}/6` : '—/6';
+  const enabledSensorCount =
+    runtime.kind === 'success' ? countEnabledCapabilities(runtime.data.capabilities) : null;
+  const sensors = enabledSensorCount === null ? '—/6' : `${enabledSensorCount}/6`;
 
   const gatewayMeta =
     gateway.kind === 'success'
@@ -136,10 +186,27 @@ export function HomeSection({
 
   const runtimeMeta =
     runtime.kind === 'success'
-      ? 'Ativo'
+      ? enabledSensorCount === 0
+        ? 'Status recebido · sem sensores disponíveis'
+        : `Status recebido · ${enabledSensorCount}/6 sensores disponíveis`
       : runtime.kind === 'loading'
         ? 'Sincronizando…'
-        : 'Offline';
+        : 'Status indisponível';
+
+  const hasStatusError =
+    runtime.kind === 'error' ||
+    gateway.kind === 'error' ||
+    internet.kind === 'error' ||
+    series.kind === 'error';
+  const stability = seriesStability(series, Date.now());
+  const currentGatewayUnavailable =
+    gateway.kind === 'success' && !isMeasurableProbeQuality(gateway.data.quality);
+  const statusCopy = hasStatusError
+    ? {
+        title: 'Status da conexão indisponível',
+        detail: 'Não foi possível avaliar a conexão com os dados locais atuais.',
+      }
+    : STABILITY_COPY[currentGatewayUnavailable ? 'insufficient_evidence' : stability];
 
   const windowStartEpochMs = Date.now() - NETWORK_SAMPLE_SERIES_WINDOW_MS;
   const markers = tracePoints
@@ -152,14 +219,12 @@ export function HomeSection({
 
   return (
     <section className="screen is-active" aria-labelledby="inicio-title">
-      <div className="title">
-        <h1 id="inicio-title">Sua conexão está estável</h1>
-        <p>Nenhum gargalo severo identificado no gateway local nas últimas 12 horas.</p>
+      <div className="title" aria-live="polite">
+        <h1 id="inicio-title">{statusCopy.title}</h1>
+        <p>{statusCopy.detail}</p>
       </div>
 
-      {runtime.kind === 'error' || gateway.kind === 'error' || internet.kind === 'error' ? (
-        <p role="alert">Não foi possível obter o status local.</p>
-      ) : null}
+      {hasStatusError ? <p role="alert">Não foi possível obter o status local.</p> : null}
 
       <div
         className="card diagnostic-path"
@@ -168,7 +233,11 @@ export function HomeSection({
       >
         <div
           className={pathNodeClassName(
-            runtime.kind === 'loading' ? 'loading' : runtime.kind === 'error' ? 'error' : 'success',
+            runtime.kind === 'loading'
+              ? 'loading'
+              : runtime.kind === 'error'
+                ? 'unavailable'
+                : 'available',
           )}
           role="listitem"
         >
@@ -196,9 +265,17 @@ export function HomeSection({
         <span className="path-connector path-connector--muted" aria-hidden="true" />
         <div
           className={pathNodeClassName(
-            gateway.kind === 'loading' ? 'loading' : gateway.kind === 'error' ? 'error' : 'success',
+            gateway.kind === 'loading'
+              ? 'loading'
+              : gateway.kind === 'error'
+                ? 'unavailable'
+                : probeNodeState(gateway.data.quality),
           )}
           role="listitem"
+          aria-disabled={
+            gateway.kind === 'error' ||
+            (gateway.kind === 'success' && !isMeasurableProbeQuality(gateway.data.quality))
+          }
         >
           <span className="path-node__icon">
             <IconHardDrive />
@@ -212,10 +289,15 @@ export function HomeSection({
             internet.kind === 'loading'
               ? 'loading'
               : internet.kind === 'error'
-                ? 'error'
-                : 'success',
+                ? 'unavailable'
+                : probeNodeState(internet.data.primary.quality),
           )}
           role="listitem"
+          aria-disabled={
+            internet.kind === 'error' ||
+            (internet.kind === 'success' &&
+              !isMeasurableProbeQuality(internet.data.primary.quality))
+          }
         >
           <span className="path-node__icon">
             <IconGlobe />
@@ -261,8 +343,18 @@ export function HomeSection({
           </p>
           <div className="tracepoint-card__footer">
             <p className="tracepoint-card__status">
-              Sensores: {sensors} Ativo | Coletor Local:{' '}
-              {runtime.kind === 'success' ? 'OK' : runtime.kind === 'loading' ? '…' : 'Erro'}
+              Sensores: {sensors}{' '}
+              {enabledSensorCount === null
+                ? '· estado desconhecido'
+                : enabledSensorCount === 0
+                  ? '· nenhum disponível'
+                  : '· disponíveis'}{' '}
+              | Coletor Local:{' '}
+              {runtime.kind === 'success'
+                ? 'Status recebido'
+                : runtime.kind === 'loading'
+                  ? 'Verificando…'
+                  : 'Status indisponível'}
             </p>
             <button
               type="button"
