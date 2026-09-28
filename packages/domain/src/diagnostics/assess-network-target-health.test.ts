@@ -14,6 +14,7 @@ function sample(
     latencyMs,
     sent: 1,
     received: ok ? 1 : 0,
+    quality: ok ? 'ok' : 'timeout',
   };
 }
 
@@ -39,15 +40,29 @@ describe('assessNetworkTargetHealth', () => {
         latencyMs: null,
         sent: 1,
         received: 1,
+        quality: 'reachable' as const,
       },
       {
         observedAtEpochMs: NOW,
         latencyMs: null,
         sent: 1,
         received: 1,
+        quality: 'reachable' as const,
       },
     ];
     expect(assessNetworkTargetHealth(samples, NOW)).toBe('good');
+  });
+
+  it('returns unknown when every sample is non-measurable', () => {
+    const samples: DetectorSample[] = Array.from({ length: 5 }, (_, i) => ({
+      observedAtEpochMs: NOW - i * 1000,
+      latencyMs: null,
+      sent: 0,
+      received: 0,
+      quality: 'permission_denied',
+    }));
+
+    expect(assessNetworkTargetHealth(samples, NOW)).toBe('unknown');
   });
 
   it('returns unknown when samples exist but none answered recently', () => {

@@ -1,16 +1,6 @@
-export type ProbeQuality =
-  | 'ok'
-  | 'unsupported'
-  | 'permission_denied'
-  | 'timeout'
-  | 'unavailable'
-  /**
-   * Legacy: TCP connectivity without RTT. New probes must not emit this on the happy path.
-   * latencyMs must stay null when quality is reachable.
-   */
-  | 'reachable'
-  /** TCP connect RTT after ICMP timeout; latencyMs must be a non-null integer ms. */
-  | 'tcp_rtt';
+import type { ProbeQuality } from '@telemetry-desk/domain';
+
+export type { ProbeQuality } from '@telemetry-desk/domain';
 
 export interface Clock {
   nowEpochMs(): number;

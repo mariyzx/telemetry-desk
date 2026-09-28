@@ -1,52 +1,33 @@
+import type { ProbeQuality } from '@telemetry-desk/domain';
 import { describe, expect, it } from 'vitest';
 import { toGatewayNetworkSample } from './to-gateway-network-sample.js';
 
-describe('toGatewayNetworkSample', () => {
-  it('maps a successful gateway probe to a network sample', () => {
-    expect(
-      toGatewayNetworkSample(
-        {
-          gatewayHost: '192.168.1.1',
-          latencyMs: 14,
-          quality: 'ok',
-          observedAtEpochMs: 1_700_000_000_000,
-          monotonicMs: 42,
-        },
-        'sample-1',
-      ),
-    ).toEqual({
-      id: 'sample-1',
-      observedAtEpochMs: 1_700_000_000_000,
-      targetRole: 'gateway',
-      targetHost: '192.168.1.1',
-      interfaceId: null,
-      latencyMs: 14,
-      jitterMs: null,
-      sent: 1,
-      received: 1,
-      lossRatio: 0,
-      quality: 'ok',
-      errorCode: null,
-    });
-  });
+const cases: [ProbeQuality, number | null, number, number, number | null, string | null][] = [
+  ['ok', 14, 1, 1, 0, null],
+  ['tcp_rtt', 29, 1, 1, 0, null],
+  ['reachable', null, 1, 1, 0, null],
+  ['timeout', null, 1, 0, 1, 'timeout'],
+  ['unsupported', null, 0, 0, null, 'unsupported'],
+  ['unavailable', null, 0, 0, null, 'unavailable'],
+  ['permission_denied', null, 0, 0, null, 'permission_denied'],
+];
 
-  it('records loss when the probe did not succeed', () => {
-    expect(
-      toGatewayNetworkSample(
-        {
-          gatewayHost: '192.168.1.1',
-          latencyMs: null,
-          quality: 'timeout',
-          observedAtEpochMs: 1_700_000_000_100,
-          monotonicMs: 142,
-        },
-        'sample-2',
-      ),
-    ).toMatchObject({
-      sent: 1,
-      received: 0,
-      lossRatio: 1,
-      errorCode: 'timeout',
-    });
-  });
+describe('toGatewayNetworkSample', () => {
+  it.each(cases)(
+    'maps %s consistently',
+    (quality, latencyMs, sent, received, lossRatio, errorCode) => {
+      expect(
+        toGatewayNetworkSample(
+          {
+            gatewayHost: '192.168.1.1',
+            latencyMs,
+            quality,
+            observedAtEpochMs: 1_700_000_000_000,
+            monotonicMs: 42,
+          },
+          'sample-1',
+        ),
+      ).toMatchObject({ latencyMs, sent, received, lossRatio, quality, errorCode });
+    },
+  );
 });
