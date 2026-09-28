@@ -52,4 +52,8 @@ Funcionais: Início (status ao vivo, caminho da conexão, gráficos de latência
 
 Placeholders: Configurações e Exportar são maquetes visuais com controles desabilitados.
 
+## Tratamento de falhas
+
+Consultas sem dados retornam listas vazias. Indisponibilidade, timeout, resposta inválida, payload IPC inválido e falhas de leitura/escrita no SQLite usam códigos fechados definidos em `packages/shared`; nunca viram dados vazios ou status sintético. A fronteira IPC preserva o código para a interface, mas substitui detalhes internos por mensagens seguras, sem caminhos locais. Flushes são serializados: amostras recebidas durante uma escrita formam o próximo lote; falhas são registradas no `stderr` e recolocam o lote no início da fila para retry sem perda ou duplicação pela fila.
+
 Repositório: https://github.com/mariyzx/telemetry-desk

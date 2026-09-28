@@ -4,8 +4,13 @@ import type {
   NetworkSample,
   NetworkTargetRole,
 } from '@telemetry-desk/application';
+import { APP_ERROR_CODES, AppError } from '@telemetry-desk/shared';
 import { networkSamples } from './schema.js';
 import type { TelemetryDatabase } from './open-sqlite-database.js';
+
+function storageError(code: AppError['code'], cause: unknown): AppError {
+  return new AppError('sqlite-network-samples', code, 'network sample storage failed', { cause });
+}
 
 export class SqliteNetworkSampleRepository implements MetricRepository {
   constructor(private readonly database: TelemetryDatabase) {}
@@ -15,28 +20,31 @@ export class SqliteNetworkSampleRepository implements MetricRepository {
       return Promise.resolve();
     }
 
-    this.database.db.transaction((tx) => {
-      for (const sample of samples) {
-        tx.insert(networkSamples)
-          .values({
-            id: sample.id,
-            observedAtEpochMs: sample.observedAtEpochMs,
-            targetRole: sample.targetRole,
-            targetHost: sample.targetHost,
-            interfaceId: sample.interfaceId,
-            latencyMs: sample.latencyMs,
-            jitterMs: sample.jitterMs,
-            sent: sample.sent,
-            received: sample.received,
-            lossRatio: sample.lossRatio,
-            quality: sample.quality,
-            errorCode: sample.errorCode,
-          })
-          .run();
-      }
-    });
-
-    return Promise.resolve();
+    try {
+      this.database.db.transaction((tx) => {
+        for (const sample of samples) {
+          tx.insert(networkSamples)
+            .values({
+              id: sample.id,
+              observedAtEpochMs: sample.observedAtEpochMs,
+              targetRole: sample.targetRole,
+              targetHost: sample.targetHost,
+              interfaceId: sample.interfaceId,
+              latencyMs: sample.latencyMs,
+              jitterMs: sample.jitterMs,
+              sent: sample.sent,
+              received: sample.received,
+              lossRatio: sample.lossRatio,
+              quality: sample.quality,
+              errorCode: sample.errorCode,
+            })
+            .run();
+        }
+      });
+      return Promise.resolve();
+    } catch (error) {
+      return Promise.reject(storageError(APP_ERROR_CODES.storageWriteFailed, error));
+    }
   }
 
   listNetworkSamplesSince(input: {
@@ -47,28 +55,36 @@ export class SqliteNetworkSampleRepository implements MetricRepository {
       return Promise.resolve([]);
     }
 
-    const rows = this.database.db
-      .select()
-      .from(networkSamples)
-      .where(
-        and(
-          gte(networkSamples.observedAtEpochMs, input.sinceEpochMs),
-          inArray(networkSamples.targetRole, [...input.targetRoles]),
-        ),
-      )
-      .orderBy(asc(networkSamples.observedAtEpochMs))
-      .all();
+    try {
+      const rows = this.database.db
+        .select()
+        .from(networkSamples)
+        .where(
+          and(
+            gte(networkSamples.observedAtEpochMs, input.sinceEpochMs),
+            inArray(networkSamples.targetRole, [...input.targetRoles]),
+          ),
+        )
+        .orderBy(asc(networkSamples.observedAtEpochMs))
+        .all();
 
-    return Promise.resolve(rows.map((row) => this.mapRow(row)));
+      return Promise.resolve(rows.map((row) => this.mapRow(row)));
+    } catch (error) {
+      return Promise.reject(storageError(APP_ERROR_CODES.storageReadFailed, error));
+    }
   }
 
   listNetworkSamples(): NetworkSample[] {
-    return this.database.db
-      .select()
-      .from(networkSamples)
-      .orderBy(asc(networkSamples.observedAtEpochMs))
-      .all()
-      .map((row) => this.mapRow(row));
+    try {
+      return this.database.db
+        .select()
+        .from(networkSamples)
+        .orderBy(asc(networkSamples.observedAtEpochMs))
+        .all()
+        .map((row) => this.mapRow(row));
+    } catch (error) {
+      throw storageError(APP_ERROR_CODES.storageReadFailed, error);
+    }
   }
 
   private mapRow(row: typeof networkSamples.$inferSelect): NetworkSample {

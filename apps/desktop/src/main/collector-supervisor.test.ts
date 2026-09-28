@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { describe, expect, it, vi } from 'vitest';
 import { CollectorProtocolHost, decodeNdjsonChunk } from '@telemetry-desk/infrastructure';
+import { APP_ERROR_CODES, AppError } from '@telemetry-desk/shared';
 import { createCollectorSupervisor } from './collector-supervisor.js';
 
 describe('CollectorSupervisor', () => {
@@ -80,10 +81,8 @@ describe('CollectorSupervisor', () => {
     expect(supervisor.getHealth()).toBe('degraded');
     expect(world.spawnCount).toBeGreaterThanOrEqual(3);
 
-    await expect(supervisor.getGatewayStatus()).resolves.toMatchObject({
-      gatewayHost: null,
-      latencyMs: null,
-      quality: 'unavailable',
+    await expect(supervisor.getGatewayStatus()).rejects.toMatchObject({
+      code: APP_ERROR_CODES.collectorUnavailable,
     });
   });
 
@@ -136,6 +135,72 @@ describe('CollectorSupervisor', () => {
     });
   });
 
+  it.each(['stopped', 'degraded'] as const)(
+    'rejects list reads when collector is %s',
+    async (state) => {
+      const world = createFakeWorld({ exitImmediately: state === 'degraded' });
+      const supervisor = createCollectorSupervisor({
+        spawn: world.spawn,
+        clock: world.clock,
+        setTimeoutFn: world.setTimeoutFn,
+        clearTimeoutFn: world.clearTimeoutFn,
+        createId: () => '8bbf73d6-57ca-4fdd-9ce7-57bcd2404520',
+        backoffMs: [0],
+        maxRestartsBeforeDegraded: 1,
+      });
+      if (state === 'degraded') {
+        await supervisor.start();
+        world.flushMicrotasks();
+      }
+
+      await expect(supervisor.listTracePoints()).rejects.toMatchObject({
+        code: APP_ERROR_CODES.collectorUnavailable,
+      });
+    },
+  );
+
+  it('distinguishes empty, collector error, and invalid response', async () => {
+    const empty = createFakeWorld();
+    const emptySupervisor = createTestSupervisor(empty);
+    await emptySupervisor.start();
+    empty.emitHeartbeat(1);
+    await expect(emptySupervisor.listTracePoints()).resolves.toEqual([]);
+
+    const failed = createFakeWorld({
+      listError: new AppError(
+        'sqlite-trace-points',
+        APP_ERROR_CODES.storageReadFailed,
+        'trace point storage failed',
+      ),
+    });
+    const failedSupervisor = createTestSupervisor(failed);
+    await failedSupervisor.start();
+    failed.emitHeartbeat(1);
+    await expect(failedSupervisor.listTracePoints()).rejects.toMatchObject({
+      code: APP_ERROR_CODES.storageReadFailed,
+    });
+
+    const invalid = createFakeWorld({ invalidListResponse: true });
+    const invalidSupervisor = createTestSupervisor(invalid);
+    await invalidSupervisor.start();
+    invalid.emitHeartbeat(1);
+    await expect(invalidSupervisor.listTracePoints()).rejects.toMatchObject({
+      code: APP_ERROR_CODES.collectorInvalidResponse,
+    });
+  });
+
+  it('distinguishes request timeout and keeps manual creation failure behavior', async () => {
+    const world = createFakeWorld({ ignoreList: true });
+    const supervisor = createTestSupervisor(world, 1);
+    await supervisor.start();
+    world.emitHeartbeat(1);
+
+    await expect(supervisor.listTracePoints()).rejects.toMatchObject({
+      code: APP_ERROR_CODES.collectorTimeout,
+    });
+    await expect(supervisor.createManualTracePoint()).rejects.toBeInstanceOf(Error);
+  });
+
   it('sends shutdown on stop and kills when the child ignores it', async () => {
     const world = createFakeWorld({ ignoreShutdown: true });
     const supervisor = createCollectorSupervisor({
@@ -168,6 +233,20 @@ describe('CollectorSupervisor', () => {
 interface FakeChildOptions {
   exitImmediately?: boolean;
   ignoreShutdown?: boolean;
+  ignoreList?: boolean;
+  invalidListResponse?: boolean;
+  listError?: Error;
+}
+
+function createTestSupervisor(world: ReturnType<typeof createFakeWorld>, requestTimeoutMs = 5_000) {
+  return createCollectorSupervisor({
+    spawn: world.spawn,
+    clock: world.clock,
+    setTimeoutFn: world.setTimeoutFn,
+    clearTimeoutFn: world.clearTimeoutFn,
+    createId: () => '8bbf73d6-57ca-4fdd-9ce7-57bcd2404520',
+    requestTimeoutMs,
+  });
 }
 
 function createFakeWorld(options: FakeChildOptions = {}) {
@@ -250,6 +329,16 @@ function createFakeWorld(options: FakeChildOptions = {}) {
       observedAtEpochMs: 1_700_000_001_000,
       monotonicMs: 1_042,
     }));
+
+    host.setHandler('collector:list-trace-points', async () => {
+      if (options.ignoreList) {
+        return await new Promise(() => undefined);
+      }
+      if (options.listError) {
+        throw options.listError;
+      }
+      return options.invalidListResponse ? { wrong: true } : { items: [] };
+    });
 
     host.setHandler('collector:shutdown', async () => {
       if (!options.ignoreShutdown) {

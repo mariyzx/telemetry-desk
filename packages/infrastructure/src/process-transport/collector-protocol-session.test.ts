@@ -1,5 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { describe, expect, it, vi } from 'vitest';
+import { APP_ERROR_CODES, AppError } from '@telemetry-desk/shared';
 import { CollectorProtocolClient, CollectorProtocolHost } from './collector-protocol-session.js';
 import { decodeNdjsonChunk, encodeNdjsonLine } from './ndjson-framing.js';
 
@@ -98,17 +99,11 @@ describe('collector protocol session', () => {
     });
 
     host.setHandler('collector:get-gateway-status', async () => {
-      throw Object.assign(new Error('boom'), {
-        id: 'err-1',
-        code: 'PROBE_FAILED',
-        serialize() {
-          return { id: 'err-1', code: 'PROBE_FAILED', message: 'boom' };
-        },
-      });
+      throw new AppError('sqlite-network-samples', APP_ERROR_CODES.storageReadFailed, 'boom');
     });
 
     await expect(client.request('collector:get-gateway-status', {})).rejects.toMatchObject({
-      code: 'PROBE_FAILED',
+      code: APP_ERROR_CODES.storageReadFailed,
       message: 'boom',
     });
   });

@@ -56,6 +56,7 @@ export interface RunCollectorOptions {
   setTimeoutFn?: (fn: () => void, ms: number) => number;
   clearTimeoutFn?: (id: number) => void;
   onShutdown?: () => void | Promise<void>;
+  onError?: (message: string, error: unknown) => void;
 }
 
 export function runCollector(options: RunCollectorOptions): () => void {
@@ -205,7 +206,11 @@ export function runCollector(options: RunCollectorOptions): () => void {
           intervalMs: persistenceFlushIntervalMs,
           leading: false,
           onTick: async () => {
-            await options.persistenceFlush?.();
+            try {
+              await options.persistenceFlush?.();
+            } catch (error) {
+              (options.onError ?? console.error)('network sample persistence flush failed', error);
+            }
           },
           setTimeoutFn,
           clearTimeoutFn,

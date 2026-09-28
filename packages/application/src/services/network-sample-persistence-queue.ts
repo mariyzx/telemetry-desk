@@ -2,6 +2,7 @@ import type { MetricRepository, NetworkSample } from '../ports/telemetry-ports.j
 
 export class NetworkSamplePersistenceQueue {
   private pending: NetworkSample[] = [];
+  private inFlight: Promise<void> | null = null;
 
   constructor(private readonly repository: Pick<MetricRepository, 'appendNetworkSamples'>) {}
 
@@ -13,13 +14,32 @@ export class NetworkSamplePersistenceQueue {
     this.pending.push(sample);
   }
 
-  async flush(): Promise<void> {
+  flush(): Promise<void> {
+    if (this.inFlight) {
+      return this.inFlight.then(() => this.flush());
+    }
     if (this.pending.length === 0) {
-      return;
+      return Promise.resolve();
     }
 
     const batch = this.pending;
-    await this.repository.appendNetworkSamples(batch);
     this.pending = [];
+    let append: Promise<void>;
+    try {
+      append = Promise.resolve(this.repository.appendNetworkSamples(batch));
+    } catch (error) {
+      append = Promise.reject(error instanceof Error ? error : new Error(String(error)));
+    }
+
+    const operation = append.catch((error: unknown) => {
+      this.pending = [...batch, ...this.pending];
+      throw error;
+    });
+    this.inFlight = operation;
+    return operation.finally(() => {
+      if (this.inFlight === operation) {
+        this.inFlight = null;
+      }
+    });
   }
 }

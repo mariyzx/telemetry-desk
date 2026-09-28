@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { APP_ERROR_CODES } from '../errors/app-error.js';
 
 export const COLLECTOR_COMMANDS = {
   getGatewayStatus: 'collector:get-gateway-status',
@@ -56,7 +57,7 @@ export const collectorResponseSchema = z.discriminatedUnion('ok', [
       error: z
         .object({
           id: z.string().min(1),
-          code: z.string().min(1),
+          code: z.enum(Object.values(APP_ERROR_CODES)),
           message: z.string().min(1),
         })
         .strict(),

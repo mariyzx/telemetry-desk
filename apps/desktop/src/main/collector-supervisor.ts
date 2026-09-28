@@ -4,6 +4,8 @@ import {
   type CollectorProtocolClientOptions,
 } from '@telemetry-desk/infrastructure';
 import {
+  APP_ERROR_CODES,
+  AppError,
   COLLECTOR_COMMANDS,
   createManualTracePointResponseSchema,
   gatewayStatusDataSchema,
@@ -14,10 +16,6 @@ import {
   type TracePointSummary,
 } from '@telemetry-desk/shared';
 import type { GatewayStatus, InternetStatus } from '@telemetry-desk/application';
-import {
-  DEFAULT_INTERNET_PRIMARY_HOST,
-  DEFAULT_INTERNET_SECONDARY_HOST,
-} from '@telemetry-desk/application';
 
 export type CollectorHealth = 'starting' | 'healthy' | 'restarting' | 'degraded' | 'stopped';
 
@@ -184,6 +182,31 @@ export function createCollectorSupervisor(
     }, delay);
   };
 
+  const request = async <T>(
+    command: Parameters<CollectorProtocolClient['request']>[0],
+    payload: Record<string, unknown>,
+    parse: (value: unknown) => T,
+  ): Promise<T> => {
+    if (health === 'degraded' || health === 'stopped' || !active) {
+      throw new AppError(
+        'collector-supervisor',
+        APP_ERROR_CODES.collectorUnavailable,
+        'collector unavailable',
+      );
+    }
+
+    const response = await active.client.request(command, payload);
+    try {
+      return parse(response);
+    } catch {
+      throw new AppError(
+        'collector-supervisor',
+        APP_ERROR_CODES.collectorInvalidResponse,
+        'collector returned an invalid response',
+      );
+    }
+  };
+
   const restartChild = (reason: 'heartbeat-timeout' | 'exit'): void => {
     if (suppressExitRestart || stopping || health === 'degraded' || health === 'stopped') {
       return;
@@ -265,99 +288,40 @@ export function createCollectorSupervisor(
       health = 'stopped';
     },
 
-    getGatewayStatus: async () => {
-      if (health === 'degraded' || health === 'stopped' || !active) {
-        return unavailableGatewayStatus(options.clock);
-      }
+    getGatewayStatus: () =>
+      request(COLLECTOR_COMMANDS.getGatewayStatus, {}, (payload) =>
+        gatewayStatusDataSchema.parse(payload),
+      ),
 
-      try {
-        const payload = await active.client.request(COLLECTOR_COMMANDS.getGatewayStatus, {});
-        return gatewayStatusDataSchema.parse(payload);
-      } catch {
-        return unavailableGatewayStatus(options.clock);
-      }
-    },
+    getInternetStatus: () =>
+      request(COLLECTOR_COMMANDS.getInternetStatus, {}, (payload) =>
+        internetStatusDataSchema.parse(payload),
+      ),
 
-    getInternetStatus: async () => {
-      if (health === 'degraded' || health === 'stopped' || !active) {
-        return unavailableInternetStatus(options.clock);
-      }
+    createManualTracePoint: () =>
+      request(COLLECTOR_COMMANDS.createManualTracePoint, {}, (payload) =>
+        createManualTracePointResponseSchema.parse(payload),
+      ),
 
-      try {
-        const payload = await active.client.request(COLLECTOR_COMMANDS.getInternetStatus, {});
-        return internetStatusDataSchema.parse(payload);
-      } catch {
-        return unavailableInternetStatus(options.clock);
-      }
-    },
+    listTracePoints: async (limit = 20) =>
+      request(
+        COLLECTOR_COMMANDS.listTracePoints,
+        { limit },
+        (payload) => listTracePointsResponseSchema.shape.data.parse(payload).items,
+      ),
 
-    createManualTracePoint: async () => {
-      if (health === 'degraded' || health === 'stopped' || !active) {
-        throw new Error('collector unavailable');
-      }
-
-      const payload = await active.client.request(COLLECTOR_COMMANDS.createManualTracePoint, {});
-      return createManualTracePointResponseSchema.parse(payload);
-    },
-
-    listTracePoints: async (limit = 20) => {
-      if (health === 'degraded' || health === 'stopped' || !active) {
-        return [];
-      }
-
-      try {
-        const payload = await active.client.request(COLLECTOR_COMMANDS.listTracePoints, { limit });
-        return listTracePointsResponseSchema.shape.data.parse(payload).items;
-      } catch {
-        return [];
-      }
-    },
-
-    listNetworkSamples: async (input) => {
-      if (health === 'degraded' || health === 'stopped' || !active) {
-        return [];
-      }
-
-      try {
-        const payload = await active.client.request(COLLECTOR_COMMANDS.listNetworkSamples, {
+    listNetworkSamples: async (input) =>
+      request(
+        COLLECTOR_COMMANDS.listNetworkSamples,
+        {
           sinceEpochMs: input.sinceEpochMs,
           ...(input.targetRoles ? { targetRoles: input.targetRoles } : {}),
           ...(input.maxPointsPerRole !== undefined
             ? { maxPointsPerRole: input.maxPointsPerRole }
             : {}),
-        });
-        return listNetworkSamplesResponseSchema.shape.data.parse(payload).points;
-      } catch {
-        return [];
-      }
-    },
-  };
-}
-
-function unavailableGatewayStatus(clock: CollectorSupervisorClock): GatewayStatus {
-  return {
-    gatewayHost: null,
-    latencyMs: null,
-    quality: 'unavailable',
-    observedAtEpochMs: clock.nowEpochMs(),
-    monotonicMs: clock.monotonicMs(),
-  };
-}
-
-function unavailableInternetStatus(clock: CollectorSupervisorClock): InternetStatus {
-  const observedAtEpochMs = clock.nowEpochMs();
-  const monotonicMs = clock.monotonicMs();
-  const unavailable = {
-    latencyMs: null,
-    quality: 'unavailable' as const,
-    observedAtEpochMs,
-    monotonicMs,
-  };
-  return {
-    primary: { host: DEFAULT_INTERNET_PRIMARY_HOST, ...unavailable },
-    secondary: { host: DEFAULT_INTERNET_SECONDARY_HOST, ...unavailable },
-    observedAtEpochMs,
-    monotonicMs,
+        },
+        (payload) => listNetworkSamplesResponseSchema.shape.data.parse(payload).points,
+      ),
   };
 }
 

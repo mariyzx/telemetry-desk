@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { NetworkSample } from '@telemetry-desk/application';
+import { APP_ERROR_CODES } from '@telemetry-desk/shared';
 import { openSqliteDatabase } from './open-sqlite-database.js';
 import { SqliteNetworkSampleRepository } from './sqlite-network-sample-repository.js';
 
@@ -42,6 +43,19 @@ function sample(overrides: Partial<NetworkSample> = {}): NetworkSample {
 }
 
 describe('SqliteNetworkSampleRepository', () => {
+  it('translates real SQLite read and write failures to stable codes', async () => {
+    const database = openSqliteDatabase(await createTempDbPath());
+    const repository = new SqliteNetworkSampleRepository(database);
+    database.close();
+
+    await expect(repository.appendNetworkSamples([sample()])).rejects.toMatchObject({
+      code: APP_ERROR_CODES.storageWriteFailed,
+    });
+    await expect(
+      repository.listNetworkSamplesSince({ sinceEpochMs: 0, targetRoles: ['gateway'] }),
+    ).rejects.toMatchObject({ code: APP_ERROR_CODES.storageReadFailed });
+  });
+
   it('persists network samples in a WAL SQLite file and reads them back', async () => {
     const dbPath = await createTempDbPath();
     const database = openSqliteDatabase(dbPath);

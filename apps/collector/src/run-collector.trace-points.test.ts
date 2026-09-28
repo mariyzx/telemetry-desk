@@ -6,9 +6,38 @@ import {
   decodeNdjsonChunk,
   encodeNdjsonLine,
 } from '@telemetry-desk/infrastructure';
+import { APP_ERROR_CODES, AppError } from '@telemetry-desk/shared';
 import { runCollector } from './run-collector.js';
 
 describe('runCollector TracePoints', () => {
+  it('preserves storage error codes through the collector protocol', async () => {
+    const pipe = createMemoryStdio();
+    const stop = runCollector({
+      stdin: pipe.parentToChild as unknown as Readable,
+      stdout: pipe.childToParent as unknown as Writable,
+      clock: { nowEpochMs: () => 0, monotonicMs: () => 0 },
+      gatewayStatus: { execute: vi.fn() },
+      listTracePoints: vi
+        .fn()
+        .mockRejectedValue(
+          new AppError('sqlite-trace-points', APP_ERROR_CODES.storageReadFailed, 'storage failed'),
+        ),
+      heartbeatIntervalMs: 60_000,
+      setIntervalFn: () => 1,
+      clearIntervalFn: vi.fn(),
+    });
+    const client = new CollectorProtocolClient({
+      write: (line) => pipe.parentToChild.write(line),
+      onLine: (listener) => pipe.childToParent.on('line', listener),
+      createId: () => '8bbf73d6-57ca-4fdd-9ce7-57bcd2404520',
+    });
+
+    await expect(client.request('collector:list-trace-points', {})).rejects.toMatchObject({
+      code: APP_ERROR_CODES.storageReadFailed,
+    });
+    stop();
+  });
+
   it('creates a manual TracePoint and lists it through typed commands', async () => {
     const pipe = createMemoryStdio();
     const summary = {
