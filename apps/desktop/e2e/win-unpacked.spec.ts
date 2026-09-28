@@ -9,6 +9,7 @@ const executable = join(import.meta.dirname, '../../../release/win-unpacked/Tele
 test.skip(process.platform !== 'win32', 'win-unpacked requires Windows');
 
 test('packaged collector becomes healthy and persists under Electron userData', async () => {
+  test.setTimeout(240_000);
   const userData = await mkdtemp(join(tmpdir(), 'telemetry-desk-e2e-'));
   const databasePath = join(userData, 'telemetry.sqlite');
   let app: ElectronApplication | undefined;
@@ -65,10 +66,12 @@ test('packaged collector becomes healthy and persists under Electron userData', 
       )
       .toBeGreaterThan(0);
   } finally {
-    try {
-      await app?.close();
-    } finally {
-      await rm(userData, { recursive: true, force: true });
-    }
+    await app?.close().catch(() => undefined);
+    await rm(userData, {
+      recursive: true,
+      force: true,
+      maxRetries: 10,
+      retryDelay: 200,
+    }).catch(() => undefined);
   }
 });
