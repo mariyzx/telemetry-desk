@@ -1,3 +1,4 @@
+import type { ProbeQuality } from '@telemetry-desk/domain';
 import type { NetworkSample, NetworkTargetRole } from '../ports/telemetry-ports.js';
 
 export type NetworkSampleSeriesRole = Extract<NetworkTargetRole, 'gateway' | 'internet'>;
@@ -6,6 +7,9 @@ export interface NetworkSamplePoint {
   observedAtEpochMs: number;
   targetRole: NetworkSampleSeriesRole;
   latencyMs: number | null;
+  sent: number;
+  received: number;
+  quality: ProbeQuality;
 }
 
 export interface ListRecentNetworkSamplesInput {
@@ -97,6 +101,9 @@ export class ListRecentNetworkSamplesService {
         observedAtEpochMs: sample.observedAtEpochMs,
         targetRole: sample.targetRole,
         latencyMs: sample.latencyMs,
+        sent: sample.sent,
+        received: sample.received,
+        quality: sample.quality,
       });
       untilEpochMs = Math.max(untilEpochMs, sample.observedAtEpochMs);
     }

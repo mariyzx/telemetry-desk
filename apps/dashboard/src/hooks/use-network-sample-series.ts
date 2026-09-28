@@ -51,7 +51,10 @@ export function useNetworkSampleSeries(
               next !== undefined &&
               point.observedAtEpochMs === next.observedAtEpochMs &&
               point.targetRole === next.targetRole &&
-              point.latencyMs === next.latencyMs
+              point.latencyMs === next.latencyMs &&
+              point.sent === next.sent &&
+              point.received === next.received &&
+              point.quality === next.quality
             );
           })
         ) {

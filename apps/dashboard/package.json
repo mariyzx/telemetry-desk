@@ -10,6 +10,7 @@
     "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
+    "@telemetry-desk/domain": "^0.1.0",
     "@telemetry-desk/shared": "^0.1.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

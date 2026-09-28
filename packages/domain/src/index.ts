@@ -62,3 +62,5 @@ export {
   unknownDiagnosisSignals,
 } from './diagnostics/classify-trace-point-diagnosis.js';
 export { assessNetworkTargetHealth } from './diagnostics/assess-network-target-health.js';
+export type { ConnectionStability } from './diagnostics/assess-connection-stability.js';
+export { assessConnectionStability } from './diagnostics/assess-connection-stability.js';

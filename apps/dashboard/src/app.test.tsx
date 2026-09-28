@@ -59,6 +59,28 @@ function gatewayReady(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function networkPoint(
+  observedAtEpochMs: number,
+  latencyMs: number | null,
+  quality: 'ok' | 'timeout' | 'tcp_rtt' | 'reachable' = latencyMs === null ? 'timeout' : 'ok',
+) {
+  return {
+    observedAtEpochMs,
+    targetRole: 'gateway' as const,
+    latencyMs,
+    sent: 1,
+    received: quality === 'timeout' ? 0 : 1,
+    quality,
+  };
+}
+
+function networkSeries(points: ReturnType<typeof networkPoint>[]) {
+  return vi.fn().mockResolvedValue({
+    correlationId: crypto.randomUUID(),
+    data: { points },
+  });
+}
+
 function installApi(overrides: Partial<NonNullable<typeof window.telemetryDesk>> = {}) {
   window.telemetryDesk = {
     getRuntimeStatus: vi.fn().mockResolvedValue(runtimeReady()),
@@ -202,6 +224,155 @@ it('shows distinct settings panels per tab', async () => {
   expect(screen.getByRole('heading', { name: 'Privacidade local' })).toBeInTheDocument();
 });
 
+it('does not claim stability while loading', () => {
+  installApi({
+    getGatewayStatus: vi.fn().mockImplementation(() => new Promise(() => undefined)),
+  });
+
+  render(<App />);
+
+  expect(
+    screen.getByRole('heading', { name: 'Aguardando evidências da conexão' }),
+  ).toBeInTheDocument();
+  expect(screen.queryByText('Sua conexão está estável')).not.toBeInTheDocument();
+});
+
+it('shows stable status only for measurable healthy gateway history', async () => {
+  const now = Date.now();
+  installApi({
+    listNetworkSamples: networkSeries([networkPoint(now - 1_000, 20), networkPoint(now, 22)]),
+  });
+  render(<App />);
+  await flushEffects();
+
+  expect(screen.getByRole('heading', { name: 'Sua conexão está estável' })).toBeInTheDocument();
+  expect(screen.getByText(/amostras do gateway local nos últimos 15 minutos/i)).toBeInTheDocument();
+  expect(screen.queryByText(/últimas 12 horas/i)).not.toBeInTheDocument();
+});
+
+it('shows unavailable measurement for unsupported gateway probes', async () => {
+  installApi({
+    getGatewayStatus: vi
+      .fn()
+      .mockResolvedValue(gatewayReady({ latencyMs: null, quality: 'unsupported' })),
+  });
+  render(<App />);
+  await flushEffects();
+
+  expect(
+    screen.getByRole('heading', { name: 'Medição de estabilidade indisponível' }),
+  ).toBeInTheDocument();
+  expect(screen.queryByText('Sua conexão está estável')).not.toBeInTheDocument();
+});
+
+it.each(['unsupported', 'unavailable', 'permission_denied'] as const)(
+  'marks a %s gateway node unavailable in text and semantics',
+  async (quality) => {
+    installApi({
+      getGatewayStatus: vi.fn().mockResolvedValue(gatewayReady({ latencyMs: null, quality })),
+    });
+    render(<App />);
+    await flushEffects();
+
+    const node = screen.getByText('Gateway Local').closest('[role="listitem"]');
+    expect(node).toHaveClass('path-node--unavailable');
+    expect(node).toHaveAttribute('aria-disabled', 'true');
+    expect(node).toHaveTextContent(
+      quality === 'unsupported'
+        ? 'Não suportado'
+        : quality === 'unavailable'
+          ? 'Indisponível'
+          : 'Sem permissão',
+    );
+  },
+);
+
+it.each(['ok', 'tcp_rtt', 'reachable', 'timeout'] as const)(
+  'keeps a measurable %s gateway node semantically available',
+  async (quality) => {
+    installApi({
+      getGatewayStatus: vi.fn().mockResolvedValue(
+        gatewayReady({
+          latencyMs: quality === 'reachable' || quality === 'timeout' ? null : 20,
+          quality,
+        }),
+      ),
+    });
+    render(<App />);
+    await flushEffects();
+
+    const node = screen.getByText('Gateway Local').closest('[role="listitem"]');
+    expect(node).not.toHaveClass('path-node--unavailable');
+    expect(node).toHaveAttribute('aria-disabled', 'false');
+  },
+);
+
+it('announces status changes without relying on color', async () => {
+  const now = Date.now();
+  installApi({ listNetworkSamples: networkSeries([networkPoint(now, 20)]) });
+  render(<App />);
+  await flushEffects();
+
+  const title = screen.getByRole('heading', { name: 'Sua conexão está estável' });
+  expect(title.parentElement).toHaveAttribute('aria-live', 'polite');
+  expect(title.parentElement).toHaveTextContent('últimos 15 minutos');
+});
+
+it('shows degraded status for degraded gateway history', async () => {
+  const now = Date.now();
+  installApi({
+    getGatewayStatus: vi.fn().mockResolvedValue(gatewayReady({ latencyMs: 100 })),
+    listNetworkSamples: networkSeries([networkPoint(now, 100)]),
+  });
+  render(<App />);
+  await flushEffects();
+
+  expect(
+    screen.getByRole('heading', { name: 'Sua conexão apresenta degradação' }),
+  ).toBeInTheDocument();
+  expect(screen.queryByText('Sua conexão está estável')).not.toBeInTheDocument();
+});
+
+it('reports zero capabilities without calling sensors active', async () => {
+  installApi({
+    getRuntimeStatus: vi.fn().mockResolvedValue({
+      ...runtimeReady(),
+      data: {
+        ...runtimeReady().data,
+        capabilities: {
+          icmp: false,
+          wifiSignal: false,
+          wifiChannel: false,
+          wifiRoaming: false,
+          gpuMetrics: false,
+          networkInterfaceStats: false,
+        },
+      },
+    }),
+  });
+  render(<App />);
+  await flushEffects();
+
+  expect(screen.getByText(/Sensores: 0\/6 · nenhum disponível/)).toBeInTheDocument();
+  expect(screen.getByText('Status recebido · sem sensores disponíveis')).toBeInTheDocument();
+  expect(screen.queryByText(/0\/6 Ativo/)).not.toBeInTheDocument();
+});
+
+it('shows an honest error state when the preload API is absent', async () => {
+  render(<App />);
+  await flushEffects();
+
+  expect(screen.getByText('Não foi possível obter o status local.')).toHaveAttribute(
+    'role',
+    'alert',
+  );
+  expect(
+    screen.getByRole('heading', { name: 'Status da conexão indisponível' }),
+  ).toBeInTheDocument();
+  expect(screen.queryByText('Sua conexão está estável')).not.toBeInTheDocument();
+  expect(screen.queryByText('Ativo')).not.toBeInTheDocument();
+});
+
 it('shows TCP RTT on the ISP path node when ICMP is blocked', async () => {
   installApi({
     getInternetStatus: vi.fn().mockResolvedValue({
@@ -335,6 +506,10 @@ it('keeps the shell visible and shows a local alert when runtime fails', async (
 
   expect(screen.getByRole('navigation', { name: 'Principal' })).toBeInTheDocument();
   expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível obter o status local.');
+  expect(
+    screen.getByRole('heading', { name: 'Status da conexão indisponível' }),
+  ).toBeInTheDocument();
+  expect(screen.queryByText('Sua conexão está estável')).not.toBeInTheDocument();
   expect(screen.queryByText('secret')).not.toBeInTheDocument();
 });
 
@@ -393,8 +568,11 @@ it('renders continuous history chart when series points arrive', async () => {
       correlationId: crypto.randomUUID(),
       data: {
         points: [
-          { observedAtEpochMs: now - 60_000, targetRole: 'gateway', latencyMs: 12 },
-          { observedAtEpochMs: now - 30_000, targetRole: 'internet', latencyMs: 24 },
+          networkPoint(now - 60_000, 12),
+          {
+            ...networkPoint(now - 30_000, 24),
+            targetRole: 'internet' as const,
+          },
         ],
       },
     }),
@@ -417,7 +595,7 @@ it('shows pending internet legend and partial note when only gateway has samples
     listNetworkSamples: vi.fn().mockResolvedValue({
       correlationId: crypto.randomUUID(),
       data: {
-        points: [{ observedAtEpochMs: now - 45_000, targetRole: 'gateway', latencyMs: 8 }],
+        points: [networkPoint(now - 45_000, 8)],
       },
     }),
   });

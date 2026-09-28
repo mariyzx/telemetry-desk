@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { probeQualitySchema } from './gateway-status.contract.js';
 
 export const networkSampleSeriesRoleSchema = z.enum(['gateway', 'internet']);
 
@@ -7,6 +8,9 @@ export const networkSamplePointSchema = z
     observedAtEpochMs: z.number().int().nonnegative(),
     targetRole: networkSampleSeriesRoleSchema,
     latencyMs: z.number().nullable(),
+    sent: z.number().int().nonnegative(),
+    received: z.number().int().nonnegative(),
+    quality: probeQualitySchema,
   })
   .strict();
 

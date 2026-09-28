@@ -45,8 +45,22 @@ describe('ListRecentNetworkSamplesService', () => {
       targetRoles: ['gateway', 'internet'],
     });
     expect(points).toEqual([
-      { observedAtEpochMs: 1_700_000_001_000, targetRole: 'gateway', latencyMs: 12 },
-      { observedAtEpochMs: 1_700_000_002_000, targetRole: 'internet', latencyMs: 20 },
+      {
+        observedAtEpochMs: 1_700_000_001_000,
+        targetRole: 'gateway',
+        latencyMs: 12,
+        sent: 1,
+        received: 1,
+        quality: 'ok',
+      },
+      {
+        observedAtEpochMs: 1_700_000_002_000,
+        targetRole: 'internet',
+        latencyMs: 20,
+        sent: 1,
+        received: 1,
+        quality: 'ok',
+      },
     ]);
   });
 
@@ -94,7 +108,14 @@ describe('ListRecentNetworkSamplesService', () => {
     });
 
     expect(points).toEqual([
-      { observedAtEpochMs: 1_700_000_001_000, targetRole: 'internet', latencyMs: 2 },
+      {
+        observedAtEpochMs: 1_700_000_001_000,
+        targetRole: 'internet',
+        latencyMs: 2,
+        sent: 1,
+        received: 1,
+        quality: 'ok',
+      },
     ]);
   });
 });
