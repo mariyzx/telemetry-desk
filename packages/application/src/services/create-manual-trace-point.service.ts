@@ -33,6 +33,7 @@ function toDetectorSamples(samples: readonly NetworkSample[]): DetectorSample[] 
       latencyMs: sample.latencyMs,
       sent: sample.sent,
       received: sample.received,
+      quality: sample.quality,
     }));
 }
 

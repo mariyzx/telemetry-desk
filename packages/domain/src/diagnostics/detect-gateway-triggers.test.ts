@@ -27,6 +27,7 @@ function sample(
     latencyMs: overrides.latencyMs !== undefined ? overrides.latencyMs : latencyMs,
     sent: overrides.sent ?? 1,
     received: overrides.received ?? (ok ? 1 : 0),
+    quality: overrides.quality ?? (ok ? 'ok' : 'timeout'),
   };
 }
 
@@ -149,6 +150,60 @@ describe('detectGatewayTriggers', () => {
     expect(triggers.find((t) => t.kind === 'jitter')?.observedValue).toBeGreaterThanOrEqual(
       JITTER_THRESHOLD_MS,
     );
+  });
+
+  it('ignores non-measurable samples in detector', () => {
+    const samples = Array.from({ length: BASELINE_MIN_SAMPLES + 5 }, (_, i) =>
+      sample(i * 1000, {
+        quality: 'unsupported',
+        sent: 1,
+        received: 0,
+        latencyMs: i % 2 === 0 ? 1 : 200,
+      }),
+    );
+
+    expect(detectGatewayTriggers(samples, BASE + (samples.length - 1) * 1000)).toEqual([]);
+  });
+
+  it('does not carry an old drop across non-measurable samples', () => {
+    const samples = [
+      sample(0, { ok: false }),
+      sample(1000, { ok: false }),
+      sample(2000, { ok: false }),
+      sample(3000, { quality: 'unsupported', sent: 0, received: 0, latencyMs: null }),
+    ];
+
+    expect(
+      detectGatewayTriggers(samples, BASE + 3000).map((trigger) => trigger.kind),
+    ).not.toContain('drop');
+  });
+
+  it('calculates loss only from measurable samples', () => {
+    const samples = [
+      ...Array.from({ length: LOSS_MIN_PROBES }, (_, i) => sample(i * 1000, { ok: i >= 2 })),
+      ...Array.from({ length: 5 }, (_, i) =>
+        sample(i * 1000 + 500, {
+          quality: 'unavailable',
+          sent: 1,
+          received: 0,
+          latencyMs: null,
+        }),
+      ),
+    ];
+
+    expect(
+      detectGatewayTriggers(samples, BASE + 5000).find((t) => t.kind === 'loss'),
+    ).toMatchObject({
+      observedValue: 2 / LOSS_MIN_PROBES,
+    });
+  });
+
+  it('requires the minimum number of measurable probes for loss', () => {
+    const samples = Array.from({ length: LOSS_MIN_PROBES }, (_, i) =>
+      sample(i * 1000, i === 0 ? { quality: 'permission_denied', sent: 0 } : { ok: false }),
+    );
+
+    expect(detectGatewayTriggers(samples, BASE + 5000).map((t) => t.kind)).not.toContain('loss');
   });
 
   it('returns no triggers for healthy low-latency samples', () => {

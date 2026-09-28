@@ -1,8 +1,11 @@
+import { isMeasurableProbeQuality, type ProbeQuality } from './probe-quality.js';
+
 export interface DetectorSample {
   observedAtEpochMs: number;
   latencyMs: number | null;
   sent: number;
   received: number;
+  quality: ProbeQuality;
 }
 
 export type GatewayTriggerKind = 'drop' | 'loss' | 'latency' | 'jitter';
@@ -45,7 +48,12 @@ function samplesInWindow(
   windowMs: number,
 ): DetectorSample[] {
   const start = nowEpochMs - windowMs;
-  return samples.filter((s) => s.observedAtEpochMs >= start && s.observedAtEpochMs <= nowEpochMs);
+  return samples.filter(
+    (s) =>
+      isMeasurableProbeQuality(s.quality) &&
+      s.observedAtEpochMs >= start &&
+      s.observedAtEpochMs <= nowEpochMs,
+  );
 }
 
 function percentileNearestRank(sorted: number[], p: number): number {
@@ -87,7 +95,9 @@ function detectDrop(samples: readonly DetectorSample[]): DetectedTrigger | null 
     return null;
   }
   const recent = samples.slice(-DROP_CONSECUTIVE_FAILURES);
-  if (recent.every((s) => !hasConnectivity(s))) {
+  if (
+    recent.every((sample) => isMeasurableProbeQuality(sample.quality) && !hasConnectivity(sample))
+  ) {
     return {
       kind: 'drop',
       observedValue: DROP_CONSECUTIVE_FAILURES,

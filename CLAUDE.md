@@ -57,10 +57,12 @@ Data flows renderer → `ipcRenderer.invoke` → main IPC handler → supervisor
 
 ### Probing and honesty about measurements
 
-`ProbeQuality` (`packages/application/src/ports/telemetry-ports.ts`) carries *how* a number was obtained, and the type's invariants are load-bearing:
+`ProbeQuality` (`packages/domain/src/diagnostics/probe-quality.ts`, re-exported by application ports) carries _how_ a number was obtained, and the type's invariants are load-bearing:
 
 - `tcp_rtt` — TCP connect RTT used when ICMP timed out; `latencyMs` must be a non-null integer and must never be presented to the user as ICMP RTT.
 - `reachable` — legacy, connectivity without RTT; `latencyMs` must stay `null`. New probes must not emit it on the happy path.
+- `ok`, `tcp_rtt`, `reachable`, and `timeout` are measurable attempts; only `timeout` is packet loss. `unsupported`, `unavailable`, and `permission_denied` are persisted with `sent: 0` and `lossRatio: null`, then ignored by automatic detectors and health assessment.
+- Historical rows keep their stored counters for compatibility. Detection interprets measurability from `quality`, so legacy non-measurable rows cannot create false triggers.
 - Raw ICMP on Windows needs elevation, so `WindowsNetworkProbe` shells out to `ping.exe` and parses both English and Portuguese output; the raw backend reports `unsupported`.
 - Internet probes alternate between two public targets so an ISP-side problem can be distinguished from a single dead host; TCP fallback uses DNS-appropriate ports (53, then 443) to separate "ICMP blocked" from "offline".
 

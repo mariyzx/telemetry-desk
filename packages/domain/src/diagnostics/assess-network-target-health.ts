@@ -1,4 +1,5 @@
 import type { TargetHealth } from './classify-trace-point-diagnosis.js';
+import { isMeasurableProbeQuality } from './probe-quality.js';
 import {
   isGatewayDegraded,
   LATENCY_WINDOW_MS,
@@ -18,16 +19,17 @@ export function assessNetworkTargetHealth(
   samples: readonly DetectorSample[],
   nowEpochMs: number,
 ): TargetHealth {
-  if (samples.length === 0) {
+  const measurable = samples.filter((sample) => isMeasurableProbeQuality(sample.quality));
+  if (measurable.length === 0) {
     return 'unknown';
   }
 
-  if (isGatewayDegraded(samples, nowEpochMs)) {
+  if (isGatewayDegraded(measurable, nowEpochMs)) {
     return 'bad';
   }
 
   const windowStart = nowEpochMs - LATENCY_WINDOW_MS;
-  const recent = samples.filter(
+  const recent = measurable.filter(
     (sample) => sample.observedAtEpochMs >= windowStart && sample.observedAtEpochMs <= nowEpochMs,
   );
 

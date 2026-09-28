@@ -16,6 +16,7 @@ function toDetectorSamples(
     latencyMs: sample.latencyMs,
     sent: sample.sent,
     received: sample.received,
+    quality: sample.quality,
   }));
 }
 

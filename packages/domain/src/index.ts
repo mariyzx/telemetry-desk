@@ -1,4 +1,6 @@
 export type { PlatformCapabilities } from './capabilities/platform-capabilities.js';
+export type { ProbeQuality } from './diagnostics/probe-quality.js';
+export { isMeasurableProbeQuality } from './diagnostics/probe-quality.js';
 export { GATEWAY_RING_BUFFER_CAPACITY, RingBuffer } from './metrics/ring-buffer.js';
 export type {
   CreateManualTracePointInput,
