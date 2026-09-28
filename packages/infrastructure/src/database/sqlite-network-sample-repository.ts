@@ -13,7 +13,11 @@ function storageError(code: AppError['code'], cause: unknown): AppError {
 }
 
 export class SqliteNetworkSampleRepository implements MetricRepository {
-  constructor(private readonly database: TelemetryDatabase) {}
+  constructor(
+    private readonly database: TelemetryDatabase,
+    private readonly deleteBatchSize = 1_000,
+    private readonly afterDeleteBatch?: (deletedCount: number) => void | Promise<void>,
+  ) {}
 
   appendNetworkSamples(samples: readonly NetworkSample[]): Promise<void> {
     if (samples.length === 0) {
@@ -71,6 +75,42 @@ export class SqliteNetworkSampleRepository implements MetricRepository {
       return Promise.resolve(rows.map((row) => this.mapRow(row)));
     } catch (error) {
       return Promise.reject(storageError(APP_ERROR_CODES.storageReadFailed, error));
+    }
+  }
+
+  async deleteNetworkSamplesBefore(cutoffEpochMs: number): Promise<number> {
+    try {
+      const statement = this.database.client.prepare(`
+        DELETE FROM network_samples
+        WHERE id IN (
+          SELECT candidate.id
+          FROM network_samples AS candidate
+          WHERE candidate.observed_at_epoch_ms < ?
+            AND NOT EXISTS (
+              SELECT 1
+              FROM protected_metric_ranges AS protected
+              WHERE candidate.observed_at_epoch_ms
+                BETWEEN protected.start_epoch_ms AND protected.end_epoch_ms
+            )
+          ORDER BY candidate.observed_at_epoch_ms
+          LIMIT ?
+        )
+      `);
+      let deleted = 0;
+
+      while (true) {
+        const batchDeleted = this.database.db.transaction(() =>
+          Number(statement.run(cutoffEpochMs, this.deleteBatchSize).changes),
+        );
+        deleted += batchDeleted;
+        if (batchDeleted < this.deleteBatchSize) {
+          return deleted;
+        }
+        await this.afterDeleteBatch?.(deleted);
+        await Promise.resolve();
+      }
+    } catch (error) {
+      throw storageError(APP_ERROR_CODES.storageWriteFailed, error);
     }
   }
 

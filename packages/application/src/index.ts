@@ -34,6 +34,7 @@ export {
 } from './services/get-internet-status.service.js';
 export { CachedGetInternetStatusService } from './services/cached-get-internet-status.service.js';
 export { NetworkSamplePersistenceQueue } from './services/network-sample-persistence-queue.js';
+export { ApplyNetworkSampleRetentionService } from './services/apply-network-sample-retention.service.js';
 export { GatewaySamplePipeline } from './services/gateway-sample-pipeline.js';
 export { InternetSamplePipeline } from './services/internet-sample-pipeline.js';
 export { toGatewayNetworkSample } from './services/to-gateway-network-sample.js';

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import {
   CachedGetGatewayStatusService,
+  ApplyNetworkSampleRetentionService,
   CachedGetInternetStatusService,
   CreateManualTracePointService,
   DetectAutomaticTracePointsService,
@@ -53,6 +54,7 @@ const networkSampleRepository = new SqliteNetworkSampleRepository(database);
 const tracePointRepository = new SqliteTracePointRepository(database);
 const ringBuffer = new RingBuffer<NetworkSample>(GATEWAY_RING_BUFFER_CAPACITY);
 const persistenceQueue = new NetworkSamplePersistenceQueue(networkSampleRepository);
+const retentionService = new ApplyNetworkSampleRetentionService(clock, networkSampleRepository);
 const samplePipeline = new GatewaySamplePipeline({
   buffer: ringBuffer,
   queue: persistenceQueue,
@@ -117,6 +119,10 @@ const stop = runCollector({
     await detectAutomaticTracePointsService.execute(ringBuffer.toArray());
   },
   persistenceFlush: () => samplePipeline.flush(),
+  applyRetention: () => retentionService.execute(),
+  onRetentionApplied: (deletedCount) => {
+    console.info(`network sample retention removed ${deletedCount} rows`);
+  },
   createManualTracePoint: async () =>
     createManualTracePointResponseSchema.parse(
       toTracePointSummary(await createManualTracePointService.execute(ringBuffer.toArray())),
